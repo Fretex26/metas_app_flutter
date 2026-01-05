@@ -40,7 +40,7 @@ class FirebaseAuthRepositoryImpl extends AuthRepository {
   }
 
   @override
-  Future<AppUser> signUp(String email, String password) async {
+  Future<AppUser> signUp(String name, String email, String password) async {
     try {
       UserCredential user = await _firebaseAuth.createUserWithEmailAndPassword(email: email, password: password);
       return AppUser(uid: user.user?.uid ?? '', email: user.user?.email ?? '');
