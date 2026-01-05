@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "244438913906",
+    "project_id": "metas-app-25ec3",
+    "storage_bucket": "metas-app-25ec3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:244438913906:android:84c56d4bfa3729d2cc03eb",
+        "android_client_info": {
+          "package_name": "com.tfm.metas_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC4SN4j1uV3uNQQByntaI0U6H8Ky0jcH24"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
