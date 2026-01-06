@@ -1,9 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:metas_app/features/domain/entities/app_user.dart';
-import 'package:metas_app/features/domain/repositories/auth.repository.dart';
+import 'package:metas_app/features/auth/domain/entities/app_user.dart';
+import 'package:metas_app/features/auth/domain/repositories/auth.repository.dart';
 
 class FirebaseAuthRepositoryImpl extends AuthRepository {
-
 
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
   

@@ -1,4 +1,4 @@
-import 'package:metas_app/features/domain/entities/app_user.dart';
+import 'package:metas_app/features/auth/domain/entities/app_user.dart';
 
 AppUser appUserFromJson(Map<String, dynamic> json) {
   return AppUser(

@@ -1,4 +1,4 @@
-import 'package:metas_app/features/domain/entities/app_user.dart';
+import 'package:metas_app/features/auth/domain/entities/app_user.dart';
 
 abstract class AuthRepository {
   Future<AppUser> getCurrentUser();

@@ -1,7 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:metas_app/features/domain/entities/app_user.dart';
-import 'package:metas_app/features/domain/repositories/auth.repository.dart';
-import 'package:metas_app/features/presentation/cubits/auth.states.dart';
+import 'package:metas_app/features/auth/domain/entities/app_user.dart';
+import 'package:metas_app/features/auth/domain/repositories/auth.repository.dart';
+import 'package:metas_app/features/auth/presentation/cubits/auth.states.dart';
 
 class AuthCubit extends Cubit<AuthStates> {
   final AuthRepository authRepository;
