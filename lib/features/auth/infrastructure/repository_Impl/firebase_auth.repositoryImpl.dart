@@ -7,23 +7,52 @@ class FirebaseAuthRepositoryImpl extends AuthRepository {
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
   
   @override
-  Future<AppUser> getCurrentUser() async {
+  Future<AppUser?> getCurrentUser() async {
     try {
       final user = _firebaseAuth.currentUser;
       if (user == null) {
-        throw Exception('User not found');
+        return null;
       }
-      return AppUser(uid: user.uid, email: user.email ?? '');
+      
+      // Recargar el usuario desde el servidor para verificar que aún existe
+      try {
+        await user.reload();
+        // Obtener el usuario actualizado después del reload
+        final updatedUser = _firebaseAuth.currentUser;
+        if (updatedUser == null || updatedUser.email == null || updatedUser.uid.isEmpty) {
+          // Si el usuario fue eliminado, hacer signOut para limpiar el estado local
+          await _firebaseAuth.signOut();
+          return null;
+        }
+        return AppUser(uid: updatedUser.uid, email: updatedUser.email!);
+      } on FirebaseAuthException catch (e) {
+        // Si el usuario fue eliminado o el token es inválido, hacer signOut
+        if (e.code == 'user-not-found' || e.code == 'user-disabled' || e.code == 'invalid-user-token') {
+          await _firebaseAuth.signOut();
+          return null;
+        }
+        rethrow;
+      }
     } catch (e) {
-      throw Exception('Error getting current user: $e');
+      // En caso de cualquier otro error, hacer signOut para limpiar el estado
+      try {
+        await _firebaseAuth.signOut();
+      } catch (_) {
+        // Ignorar errores al hacer signOut
+      }
+      return null;
     }
   }
 
   @override
-  Future<AppUser> signInWithEmailAndPassword(String email, String password) async {
+  Future<AppUser?> signInWithEmailAndPassword(String email, String password) async {
     try {
-      UserCredential user = await _firebaseAuth.signInWithEmailAndPassword(email: email, password: password);
-      return AppUser(uid: user.user?.uid ?? '', email: user.user?.email ?? '');
+      UserCredential userCredential = await _firebaseAuth.signInWithEmailAndPassword(email: email, password: password);
+      final user = userCredential.user;
+      if (user == null || user.email == null || user.uid.isEmpty) {
+        return null;
+      }
+      return AppUser(uid: user.uid, email: user.email!);
     } catch (e) {
       throw Exception('Error signing in with email and password: $e');
     }
@@ -39,10 +68,14 @@ class FirebaseAuthRepositoryImpl extends AuthRepository {
   }
 
   @override
-  Future<AppUser> signUp(String name, String email, String password) async {
+  Future<AppUser?> signUp(String name, String email, String password) async {
     try {
-      UserCredential user = await _firebaseAuth.createUserWithEmailAndPassword(email: email, password: password);
-      return AppUser(uid: user.user?.uid ?? '', email: user.user?.email ?? '');
+      UserCredential userCredential = await _firebaseAuth.createUserWithEmailAndPassword(email: email, password: password);
+      final user = userCredential.user;
+      if (user == null || user.email == null || user.uid.isEmpty) {
+        return null;
+      }
+      return AppUser(uid: user.uid, email: user.email!);
     } catch (e) {
       throw Exception('Error signing up: $e');
     }

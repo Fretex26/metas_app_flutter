@@ -4,7 +4,8 @@ import 'package:metas_app/features/auth/presentation/components/my_textfield.dar
 import 'package:metas_app/features/auth/presentation/pages/register.page.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  final Function() togglePages;
+  const LoginPage({super.key, required this.togglePages });
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -77,8 +78,16 @@ class _LoginPageState extends State<LoginPage> {
                       color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
+                  // TextButton(onPressed: () {
+                  //   Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const RegisterPage()));
+                  // }, child: Text("Registrate",
+                  //   style: TextStyle(
+                  //     color: Theme.of(context).colorScheme.primary,
+                  //     fontWeight: FontWeight.bold,
+                  //   ),
+                  // )),
                   TextButton(onPressed: () {
-                    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const RegisterPage()));
+                    widget.togglePages();
                   }, child: Text("Registrate",
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.primary,

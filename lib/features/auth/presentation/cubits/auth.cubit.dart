@@ -36,7 +36,8 @@ class AuthCubit extends Cubit<AuthStates> {
     emit(AuthLoading());
     try {
       _currentUser = await authRepository.signUp(name, email, password);
-      emit(_currentUser != null ? AuthSuccess(user: _currentUser!) : Unauthenticated());
+      final newState = _currentUser != null ? AuthSuccess(user: _currentUser!) : Unauthenticated();
+      emit(newState);
     } catch (e) {
       emit(AuthFailure(error: e.toString()));
       emit(Unauthenticated());
