@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:metas_app/features/auth/presentation/components/my_button.dart';
 import 'package:metas_app/features/auth/presentation/components/my_textfield.dart';
 import 'package:metas_app/features/auth/presentation/cubits/auth.cubit.dart';
-import 'package:metas_app/features/auth/presentation/pages/login.page.dart';
+import 'package:metas_app/features/auth/presentation/cubits/auth.states.dart';
 
 class RegisterPage extends StatefulWidget {
   final Function() togglePages;
@@ -54,13 +54,25 @@ class _RegisterPageState extends State<RegisterPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 25.0),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
+    return BlocListener<AuthCubit, AuthStates>(
+      listener: (context, state) {
+        if (state is AuthFailure) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.error),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
+      },
+      child: Scaffold(
+        body: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 25.0),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
               Icon(
                 Icons.lock_open,
                 size: 100,
@@ -125,23 +137,6 @@ class _RegisterPageState extends State<RegisterPage> {
                       color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
-                  // TextButton(
-                  //   onPressed: () {
-                  //     Navigator.pushReplacement(
-                  //       context,
-                  //       MaterialPageRoute(
-                  //         builder: (context) => const LoginPage(),
-                  //       ),
-                  //     );
-                  //   },
-                  //   child: Text(
-                  //     "Ingresa aquí",
-                  //     style: TextStyle(
-                  //       color: Theme.of(context).colorScheme.primary,
-                  //       fontWeight: FontWeight.bold,
-                  //     ),
-                  //   ),
-                  // ),
                   TextButton(onPressed: () {
                     widget.togglePages();
                   }, child: Text("Ingresa aquí",
@@ -155,6 +150,7 @@ class _RegisterPageState extends State<RegisterPage> {
             ],
           ),
         ),
+      ),
       ),
     );
   }
