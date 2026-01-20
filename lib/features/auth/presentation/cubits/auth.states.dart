@@ -17,3 +17,9 @@ class AuthFailure extends AuthStates {
   final String error;
   AuthFailure({required this.error});
 }
+
+class GoogleAuthPendingRegistration extends AuthStates {
+  final AppUser googleUser; // Usuario autenticado con Google pero sin completar registro
+  final String email;
+  GoogleAuthPendingRegistration({required this.googleUser, required this.email});
+}
