@@ -1,13 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:metas_app/features/auth/presentation/components/my_button.dart';
+import 'package:metas_app/features/auth/presentation/components/my_role_dropdown.dart';
 import 'package:metas_app/features/auth/presentation/components/my_textfield.dart';
 import 'package:metas_app/features/auth/presentation/cubits/auth.cubit.dart';
 import 'package:metas_app/features/auth/presentation/cubits/auth.states.dart';
 
 class RegisterPage extends StatefulWidget {
   final Function() togglePages;
-  const RegisterPage({super.key, required this.togglePages });
+  final String? googleEmail;
+  final bool isGoogleRegistration;
+  
+  const RegisterPage({
+    super.key, 
+    required this.togglePages,
+    this.googleEmail,
+    this.isGoogleRegistration = false,
+  });
 
   @override
   State<RegisterPage> createState() => _RegisterPageState();
@@ -18,29 +27,65 @@ class _RegisterPageState extends State<RegisterPage> {
   final passwordController = TextEditingController();
   final passwordConfirmationController = TextEditingController();
   final nameController = TextEditingController();
+  String? selectedRole; // 'user' o 'sponsor'
+  
+  @override
+  void initState() {
+    super.initState();
+    // Pre-llenar el email si viene de Google
+    if (widget.googleEmail != null) {
+      emailController.text = widget.googleEmail!;
+    }
+  }
 
   Future<void> signUp() async {
-    if (nameController.text.isEmpty ||
-        emailController.text.isEmpty ||
-        passwordController.text.isEmpty ||
-        passwordConfirmationController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Todos los campos son requeridos')),
+    if (widget.isGoogleRegistration) {
+      // Modo completar registro de Google - requiere nombre y rol
+      if (nameController.text.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('El nombre es requerido')),
+        );
+        return;
+      }
+      if (selectedRole == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Debes seleccionar un propósito')),
+        );
+        return;
+      }
+      final authCubit = context.read<AuthCubit>();
+      await authCubit.completeGoogleRegistration(nameController.text, selectedRole!);
+    } else {
+      // Modo registro normal - requiere todos los campos
+      if (nameController.text.isEmpty ||
+          emailController.text.isEmpty ||
+          passwordController.text.isEmpty ||
+          passwordConfirmationController.text.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Todos los campos son requeridos')),
+        );
+        return;
+      }
+      if (selectedRole == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Debes seleccionar un propósito')),
+        );
+        return;
+      }
+      if (passwordController.text != passwordConfirmationController.text) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Las contraseñas no coinciden')),
+        );
+        return;
+      }
+      final authCubit = context.read<AuthCubit>();
+      await authCubit.signUp(
+        nameController.text,
+        emailController.text,
+        passwordController.text,
+        selectedRole!,
       );
-      return;
     }
-    if (passwordController.text != passwordConfirmationController.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Las contraseñas no coinciden')),
-      );
-      return;
-    }
-    final authCubit = context.read<AuthCubit>();
-    await authCubit.signUp(
-      nameController.text,
-      emailController.text,
-      passwordController.text,
-    );
   }
 
   @override
@@ -82,7 +127,9 @@ class _RegisterPageState extends State<RegisterPage> {
               SizedBox(height: 25),
 
               Text(
-                "CREA UNA CUENTA",
+                widget.isGoogleRegistration 
+                    ? "COMPLETA TU REGISTRO" 
+                    : "CREA UNA CUENTA",
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -104,49 +151,67 @@ class _RegisterPageState extends State<RegisterPage> {
                 controller: emailController,
                 hintText: 'Email',
                 obscureText: false,
+                enabled: !widget.isGoogleRegistration, // Email de solo lectura cuando viene de Google
               ),
+
+              if (!widget.isGoogleRegistration) ...[
+                SizedBox(height: 10),
+
+                MyTextField(
+                  controller: passwordController,
+                  hintText: 'Contraseña',
+                  obscureText: true,
+                ),
+
+                SizedBox(height: 10),
+
+                MyTextField(
+                  controller: passwordConfirmationController,
+                  hintText: 'Confirmar Contraseña',
+                  obscureText: true,
+                ),
+              ],
 
               SizedBox(height: 10),
 
-              MyTextField(
-                controller: passwordController,
-                hintText: 'Contraseña',
-                obscureText: true,
-              ),
-
-              SizedBox(height: 10),
-
-              MyTextField(
-                controller: passwordConfirmationController,
-                hintText: 'Confirmar Contraseña',
-                obscureText: true,
+              MyRoleDropdown(
+                value: selectedRole,
+                onChanged: (value) {
+                  setState(() {
+                    selectedRole = value;
+                  });
+                },
               ),
 
               SizedBox(height: 25),
 
-              MyButton(onTap: signUp, text: "CREAR CUENTA"),
+              MyButton(
+                onTap: signUp, 
+                text: widget.isGoogleRegistration ? "COMPLETAR REGISTRO" : "CREAR CUENTA"
+              ),
 
               SizedBox(height: 25),
 
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    "¿Ya tienes una cuenta?",
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.primary,
+              if (!widget.isGoogleRegistration)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      "¿Ya tienes una cuenta?",
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                     ),
-                  ),
-                  TextButton(onPressed: () {
-                    widget.togglePages();
-                  }, child: Text("Ingresa aquí",
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  )),
-                ],
-              ),
+                    TextButton(onPressed: () {
+                      widget.togglePages();
+                    }, child: Text("Ingresa aquí",
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    )),
+                  ],
+                ),
             ],
           ),
         ),

@@ -68,10 +68,10 @@ class AuthCubit extends Cubit<AuthStates> {
     }
   }
 
-  Future<void> signUp(String name, String email, String password) async {
+  Future<void> signUp(String name, String email, String password, String role) async {
     emit(AuthLoading());
     try {
-      _currentUser = await authRepository.signUp(name, email, password);
+      _currentUser = await authRepository.signUp(name, email, password, role);
       final newState = _currentUser != null ? AuthSuccess(user: _currentUser!) : Unauthenticated();
       emit(newState);
     } on FirebaseAuthException catch (e) {
@@ -125,13 +125,42 @@ class AuthCubit extends Cubit<AuthStates> {
         emit(Unauthenticated());
         return;
       }
-      emit(AuthSuccess(user: _currentUser!));
+      
+      // Verificar si el usuario es nuevo usando el repositorio
+      final isNewUser = authRepository.lastGoogleUserIsNew;
+      
+      if (isNewUser) {
+        // Si el usuario es nuevo, necesita completar el formulario de registro
+        emit(GoogleAuthPendingRegistration(
+          googleUser: _currentUser!,
+          email: _currentUser!.email,
+        ));
+      } else {
+        // Si el usuario ya existe, autenticación exitosa
+        emit(AuthSuccess(user: _currentUser!));
+      }
     } on FirebaseAuthException catch (e) {
       final errorMessage = _getErrorMessage(e.code);
       emit(AuthFailure(error: errorMessage));
       emit(Unauthenticated());
     } catch (e) {
       emit(AuthFailure(error: 'Ocurrió un error al iniciar sesión con Google. Por favor, intenta de nuevo.'));
+      emit(Unauthenticated());
+    }
+  }
+  
+  Future<void> completeGoogleRegistration(String name, String role) async {
+    emit(AuthLoading());
+    try {
+      _currentUser = await authRepository.completeGoogleRegistration(name, role);
+      if (_currentUser == null) {
+        emit(AuthFailure(error: 'Error al completar el registro'));
+        emit(Unauthenticated());
+        return;
+      }
+      emit(AuthSuccess(user: _currentUser!));
+    } catch (e) {
+      emit(AuthFailure(error: e.toString()));
       emit(Unauthenticated());
     }
   }

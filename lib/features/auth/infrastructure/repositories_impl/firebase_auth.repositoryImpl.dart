@@ -1,11 +1,18 @@
+import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:metas_app/features/auth/domain/entities/app_user.dart';
 import 'package:metas_app/features/auth/domain/repositories/auth.repository.dart';
+import 'package:metas_app/features/user/domain/repositories/user.repository.dart';
+import 'package:metas_app/features/user/infrastructure/repositories_impl/user.repository_impl.dart';
 
 class FirebaseAuthRepositoryImpl extends AuthRepository {
 
   final FirebaseAuth _firebaseAuth = FirebaseAuth.instance;
+  final UserRepository _userRepository;
+  
+  FirebaseAuthRepositoryImpl({UserRepository? userRepository})
+      : _userRepository = userRepository ?? UserRepositoryImpl();
   
   // Instancia de GoogleSignIn configurada para siempre mostrar el selector de cuentas
   final GoogleSignIn _googleSignIn = GoogleSignIn(
@@ -82,13 +89,59 @@ class FirebaseAuthRepositoryImpl extends AuthRepository {
   }
 
   @override
-  Future<AppUser?> signUp(String name, String email, String password) async {
+  Future<AppUser?> signUp(String name, String email, String password, String role) async {
     try {
+      // 1. Registrar en Firebase
       UserCredential userCredential = await _firebaseAuth.createUserWithEmailAndPassword(email: email, password: password);
       final user = userCredential.user;
       if (user == null || user.email == null || user.uid.isEmpty) {
         return null;
       }
+
+      // 2. Obtener el token ID de Firebase
+      String? token = await user.getIdToken();
+      if (token == null) {
+        throw Exception('No se pudo obtener el token de Firebase');
+      }
+
+      // 3. Registrar en la API
+      try {
+        await _userRepository.registerUser(
+          firebaseIdToken: token,
+          name: name,
+          email: email,
+          role: role,
+        );
+      } on DioException catch (e) {
+        // Manejar errores de la API
+        if (e.response?.statusCode == 409) {
+          // El usuario ya está registrado en la API (puede ser un re-registro)
+          // Continuar normalmente ya que el usuario de Firebase se creó correctamente
+        } else if (e.response?.statusCode == 401) {
+          // Token inválido, intentar obtener uno nuevo
+          token = await user.getIdToken(true); // Forzar refresh del token
+          if (token != null) {
+            try {
+              await _userRepository.registerUser(
+                firebaseIdToken: token,
+                name: name,
+                email: email,
+                role: role,
+              );
+            } catch (retryError) {
+              // Si aún falla, loguear pero no fallar el registro en Firebase
+              // El usuario quedará registrado en Firebase pero no en la API
+              print('Advertencia: No se pudo registrar el usuario en la API después del reintento: $retryError');
+            }
+          }
+        } else {
+          // Otros errores de la API
+          // El usuario quedará registrado en Firebase pero no en la API
+          // Esto permite que el flujo continúe, pero debería manejarse según la lógica de negocio
+          print('Advertencia: No se pudo registrar el usuario en la API: ${e.message}');
+        }
+      }
+
       return AppUser(uid: user.uid, email: user.email!);
     } on FirebaseAuthException {
       // Re-lanzar la excepción de Firebase para que el cubit pueda manejarla
@@ -125,6 +178,9 @@ class FirebaseAuthRepositoryImpl extends AuthRepository {
   @override
   Future<AppUser?> signInWithGoogle() async {
     try {
+      // Resetear el flag de usuario nuevo
+      _lastGoogleUserIsNew = false;
+      
       // Cerrar sesión previa de Google para forzar siempre el selector de cuentas
       // Esto asegura que el usuario pueda elegir la cuenta en cada inicio de sesión
       await _googleSignIn.signOut();
@@ -155,12 +211,91 @@ class FirebaseAuthRepositoryImpl extends AuthRepository {
         return null;
       }
       
+      // Verificar si el usuario es nuevo usando additionalUserInfo
+      _lastGoogleUserIsNew = userCredential.additionalUserInfo?.isNewUser ?? false;
+      
       return AppUser(uid: user.uid, email: user.email!);
     } on FirebaseAuthException {
       // Re-lanzar la excepción de Firebase para que el cubit pueda manejarla
       rethrow;
     } catch (e) {
       throw Exception('Error signing in with Google: $e');
+    }
+  }
+  
+  // Variable temporal para almacenar si el último usuario autenticado con Google es nuevo
+  bool _lastGoogleUserIsNew = false;
+  
+  @override
+  bool get lastGoogleUserIsNew => _lastGoogleUserIsNew;
+  
+  // Método para completar el registro después de autenticarse con Google
+  @override
+  Future<AppUser?> completeGoogleRegistration(String name, String role) async {
+    try {
+      final user = _firebaseAuth.currentUser;
+      if (user == null) {
+        throw Exception('No hay usuario autenticado');
+      }
+
+      final email = user.email;
+      if (email == null || email.isEmpty) {
+        throw Exception('El usuario no tiene un email válido');
+      }
+      
+      // Actualizar el perfil del usuario con el nombre
+      await user.updateDisplayName(name);
+      await user.reload();
+      
+      final updatedUser = _firebaseAuth.currentUser;
+      if (updatedUser == null || updatedUser.email == null || updatedUser.uid.isEmpty) {
+        return null;
+      }
+
+      // Obtener el token ID de Firebase
+      String? token = await updatedUser.getIdToken();
+      if (token == null) {
+        throw Exception('No se pudo obtener el token de Firebase');
+      }
+
+      // Registrar en la API
+      try {
+        await _userRepository.registerUser(
+          firebaseIdToken: token,
+          name: name,
+          email: email,
+          role: role,
+        );
+      } on DioException catch (e) {
+        // Manejar errores de la API
+        if (e.response?.statusCode == 409) {
+          // El usuario ya está registrado en la API (puede ser un re-registro)
+          // Continuar normalmente ya que el usuario de Firebase se creó correctamente
+        } else if (e.response?.statusCode == 401) {
+          // Token inválido, intentar obtener uno nuevo
+          token = await updatedUser.getIdToken(true); // Forzar refresh del token
+          if (token != null) {
+            try {
+              await _userRepository.registerUser(
+                firebaseIdToken: token,
+                name: name,
+                email: email,
+                role: role,
+              );
+            } catch (retryError) {
+              // Si aún falla, loguear pero no fallar el registro en Firebase
+              print('Advertencia: No se pudo registrar el usuario en la API después del reintento: $retryError');
+            }
+          }
+        } else {
+          // Otros errores de la API
+          print('Advertencia: No se pudo registrar el usuario en la API: ${e.message}');
+        }
+      }
+      
+      return AppUser(uid: updatedUser.uid, email: updatedUser.email!);
+    } catch (e) {
+      throw Exception('Error completando el registro: $e');
     }
   }
 }
