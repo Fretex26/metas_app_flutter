@@ -132,7 +132,9 @@ class _ProjectsListPageState extends State<ProjectsListPage> {
                         MaterialPageRoute(
                           builder: (context) => ProjectDetailPage(projectId: project.id),
                         ),
-                      );
+                      ).then((_) {
+                        context.read<ProjectsCubit>().loadProjects();
+                      });
                     },
                   );
                 },

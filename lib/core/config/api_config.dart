@@ -4,6 +4,6 @@ class ApiConfig {
   // Ejemplo: 'https://tu-api-produccion.com' para producción
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://192.168.1.24:3000',
+    defaultValue: 'http://192.100.100.132:3000',
   );
 }

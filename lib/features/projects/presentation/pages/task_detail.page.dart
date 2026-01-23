@@ -18,7 +18,7 @@ import 'package:metas_app/features/projects/presentation/pages/create_checklist_
 /// 
 /// Al marcar/desmarcar checklist items, el estado de la task se actualiza automáticamente
 /// en el backend según las reglas de dependencias.
-class TaskDetailPage extends StatelessWidget {
+class TaskDetailPage extends StatefulWidget {
   /// Identificador único del proyecto (para navegación)
   final String projectId;
 
@@ -36,6 +36,11 @@ class TaskDetailPage extends StatelessWidget {
     required this.taskId,
   });
 
+  @override
+  State<TaskDetailPage> createState() => _TaskDetailPageState();
+}
+
+class _TaskDetailPageState extends State<TaskDetailPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -62,7 +67,7 @@ class TaskDetailPage extends StatelessWidget {
                   const SizedBox(height: 16),
                   ElevatedButton(
                     onPressed: () {
-                      context.read<TaskDetailCubit>().loadTask(milestoneId, taskId);
+                      context.read<TaskDetailCubit>().loadTask(widget.milestoneId, widget.taskId);
                     },
                     child: const Text('Reintentar'),
                   ),
@@ -74,8 +79,9 @@ class TaskDetailPage extends StatelessWidget {
           if (taskState is TaskDetailLoaded) {
             return RefreshIndicator(
               onRefresh: () async {
-                await context.read<TaskDetailCubit>().refreshTask(milestoneId, taskId);
-                context.read<ChecklistCubit>().loadChecklistItems(taskId);
+                //await context.read<TaskDetailCubit>().refreshTask(widget.milestoneId, widget.taskId);
+                context.read<TaskDetailCubit>().loadTask(widget.milestoneId, widget.taskId);
+                context.read<ChecklistCubit>().loadChecklistItems(widget.taskId);
               },
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
@@ -218,8 +224,13 @@ class TaskDetailPage extends StatelessWidget {
                               return ChecklistItemWidget(
                                 item: item,
                                 isLoading: updatingId == item.id,
-                                onToggle: () {
-                                  context.read<ChecklistCubit>().toggleChecklistItem(taskId, item);
+                                onToggle: () async {
+                                  // Actualizar el checklist item
+                                  await context.read<ChecklistCubit>().toggleChecklistItem(widget.taskId, item);
+                                  // Recargar la task para actualizar el StatusBadge
+                                  if (mounted) {
+                                    context.read<TaskDetailCubit>().loadTask(widget.milestoneId, widget.taskId);
+                                  }
                                 },
                               );
                             }).toList(),
@@ -246,11 +257,11 @@ class TaskDetailPage extends StatelessWidget {
             MaterialPageRoute(
               builder: (_) => BlocProvider.value(
                 value: checklistCubit,
-                child: CreateChecklistItemPage(taskId: taskId),
+                child: CreateChecklistItemPage(taskId: widget.taskId),
               ),
             ),
           ).then((_) {
-            context.read<ChecklistCubit>().loadChecklistItems(taskId);
+            context.read<ChecklistCubit>().loadChecklistItems(widget.taskId);
           });
         },
         child: const Icon(Icons.add),
