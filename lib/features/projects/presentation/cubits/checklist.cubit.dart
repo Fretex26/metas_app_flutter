@@ -72,4 +72,29 @@ class ChecklistCubit extends Cubit<ChecklistState> {
       emit(ChecklistError(e.toString()));
     }
   }
+
+  /// Actualiza un checklist item existente.
+  /// 
+  /// [taskId] - Identificador único de la task
+  /// [itemId] - Identificador único del checklist item
+  /// [dto] - Datos a actualizar
+  /// 
+  /// Emite:
+  /// - [ChecklistItemUpdating] mientras actualiza
+  /// - [ChecklistItemUpdated] con el item actualizado
+  /// - [ChecklistError] si hay un error
+  Future<void> updateChecklistItem(String taskId, String itemId, UpdateChecklistItemDto dto) async {
+    if (state is ChecklistLoaded) {
+      final currentItems = (state as ChecklistLoaded).items;
+      emit(ChecklistItemUpdating(currentItems, itemId));
+    }
+
+    try {
+      final updatedItem = await _updateChecklistItemUseCase(taskId, itemId, dto);
+      emit(ChecklistItemUpdated(updatedItem));
+      await loadChecklistItems(taskId);
+    } catch (e) {
+      emit(ChecklistError(e.toString()));
+    }
+  }
 }

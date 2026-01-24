@@ -24,3 +24,9 @@ class ChecklistItemUpdating extends ChecklistState {
 
   ChecklistItemUpdating(this.items, this.updatingItemId);
 }
+
+class ChecklistItemUpdated extends ChecklistState {
+  final ChecklistItem item;
+
+  ChecklistItemUpdated(this.item);
+}

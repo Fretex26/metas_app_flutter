@@ -335,6 +335,7 @@ class _ProjectDetailContent extends StatelessWidget {
           ),
         ),
         floatingActionButton: FloatingActionButton(
+          heroTag: 'project_detail_fab',
           onPressed: () {
             final cubit = scaffoldContext.read<ProjectDetailCubit>();
             Navigator.push(
