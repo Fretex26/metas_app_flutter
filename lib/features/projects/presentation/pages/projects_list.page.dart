@@ -35,6 +35,7 @@ class _ProjectsListPageState extends State<ProjectsListPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Proyectos'),
+        automaticallyImplyLeading: false,
         actions: [
           IconButton(
             onPressed: () {

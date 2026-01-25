@@ -18,6 +18,9 @@ import 'package:metas_app/features/projects/application/use_cases/get_project_mi
 import 'package:metas_app/features/projects/application/use_cases/get_project_progress.use_case.dart';
 import 'package:metas_app/features/projects/application/use_cases/get_task_by_id.use_case.dart';
 import 'package:metas_app/features/projects/application/use_cases/get_user_projects.use_case.dart';
+import 'package:metas_app/features/projects/application/use_cases/get_user_rewards.use_case.dart';
+import 'package:metas_app/features/projects/application/use_cases/get_reward_by_id.use_case.dart';
+import 'package:metas_app/features/projects/application/use_cases/get_project_by_reward_id.use_case.dart';
 import 'package:metas_app/features/projects/application/use_cases/update_checklist_item.use_case.dart';
 import 'package:metas_app/features/projects/application/use_cases/update_project.use_case.dart';
 import 'package:metas_app/features/projects/application/use_cases/delete_project.use_case.dart';
@@ -29,16 +32,19 @@ import 'package:metas_app/features/projects/application/use_cases/delete_checkli
 import 'package:metas_app/features/projects/domain/repositories/checklist_item.repository.dart';
 import 'package:metas_app/features/projects/domain/repositories/milestone.repository.dart';
 import 'package:metas_app/features/projects/domain/repositories/project.repository.dart';
+import 'package:metas_app/features/projects/domain/repositories/reward.repository.dart';
 import 'package:metas_app/features/projects/domain/repositories/task.repository.dart';
 import 'package:metas_app/features/projects/infrastructure/repositories_impl/checklist_item.repository_impl.dart';
 import 'package:metas_app/features/projects/infrastructure/repositories_impl/milestone.repository_impl.dart';
 import 'package:metas_app/features/projects/infrastructure/repositories_impl/project.repository_impl.dart';
+import 'package:metas_app/features/projects/infrastructure/repositories_impl/reward.repository_impl.dart';
 import 'package:metas_app/features/projects/infrastructure/repositories_impl/task.repository_impl.dart';
 import 'package:metas_app/features/projects/presentation/cubits/create_milestone.cubit.dart';
 import 'package:metas_app/features/projects/presentation/cubits/create_project.cubit.dart';
 import 'package:metas_app/features/projects/presentation/cubits/create_task.cubit.dart';
 import 'package:metas_app/features/projects/presentation/cubits/projects.cubit.dart';
-import 'package:metas_app/features/projects/presentation/pages/projects_list.page.dart';
+import 'package:metas_app/features/projects/presentation/cubits/rewards.cubit.dart';
+import 'package:metas_app/features/projects/presentation/pages/main_navigation.page.dart';
 import 'package:metas_app/firebase_options.dart';
 import 'package:flutter/material.dart';
 import 'package:metas_app/themes/dark.mode.dart';
@@ -62,10 +68,12 @@ class MyApp extends StatelessWidget {
   final MilestoneRepository _milestoneRepository = MilestoneRepositoryImpl();
   final TaskRepository _taskRepository = TaskRepositoryImpl();
   final ChecklistItemRepository _checklistItemRepository = ChecklistItemRepositoryImpl();
+  final RewardRepository _rewardRepository = RewardRepositoryImpl();
 
   // Use Cases
   GetUserProjectsUseCase get _getUserProjectsUseCase => GetUserProjectsUseCase(_projectRepository);
   GetProjectByIdUseCase get _getProjectByIdUseCase => GetProjectByIdUseCase(_projectRepository);
+  GetProjectByRewardIdUseCase get _getProjectByRewardIdUseCase => GetProjectByRewardIdUseCase(_projectRepository);
   GetProjectProgressUseCase get _getProjectProgressUseCase => GetProjectProgressUseCase(_projectRepository);
   CreateProjectUseCase get _createProjectUseCase => CreateProjectUseCase(_projectRepository);
   GetProjectMilestonesUseCase get _getProjectMilestonesUseCase => GetProjectMilestonesUseCase(_milestoneRepository);
@@ -78,6 +86,9 @@ class MyApp extends StatelessWidget {
   CreateChecklistItemUseCase get _createChecklistItemUseCase => CreateChecklistItemUseCase(_checklistItemRepository);
   UpdateChecklistItemUseCase get _updateChecklistItemUseCase => UpdateChecklistItemUseCase(_checklistItemRepository);
   DeleteChecklistItemUseCase get _deleteChecklistItemUseCase => DeleteChecklistItemUseCase(_checklistItemRepository);
+  // Rewards
+  GetRewardByIdUseCase get _getRewardByIdUseCase => GetRewardByIdUseCase(_rewardRepository);
+  GetUserRewardsUseCase get _getUserRewardsUseCase => GetUserRewardsUseCase(_rewardRepository);
   // Project update and delete
   UpdateProjectUseCase get _updateProjectUseCase => UpdateProjectUseCase(_projectRepository);
   DeleteProjectUseCase get _deleteProjectUseCase => DeleteProjectUseCase(_projectRepository);
@@ -98,6 +109,9 @@ class MyApp extends StatelessWidget {
         ),
         RepositoryProvider<GetProjectByIdUseCase>.value(
           value: _getProjectByIdUseCase,
+        ),
+        RepositoryProvider<GetProjectByRewardIdUseCase>.value(
+          value: _getProjectByRewardIdUseCase,
         ),
         RepositoryProvider<GetProjectProgressUseCase>.value(
           value: _getProjectProgressUseCase,
@@ -134,6 +148,13 @@ class MyApp extends StatelessWidget {
         ),
         RepositoryProvider<DeleteChecklistItemUseCase>.value(
           value: _deleteChecklistItemUseCase,
+        ),
+        // Rewards
+        RepositoryProvider<GetRewardByIdUseCase>.value(
+          value: _getRewardByIdUseCase,
+        ),
+        RepositoryProvider<GetUserRewardsUseCase>.value(
+          value: _getUserRewardsUseCase,
         ),
         // Project update and delete
         RepositoryProvider<UpdateProjectUseCase>.value(
@@ -182,6 +203,13 @@ class MyApp extends StatelessWidget {
           ),
           // TaskDetailCubit is now created per-page, not globally
           // ChecklistCubit is now created per-page, not globally
+          // Rewards
+          BlocProvider<RewardsCubit>(
+            create: (context) => RewardsCubit(
+              getRewardByIdUseCase: _getRewardByIdUseCase,
+              getUserRewardsUseCase: _getUserRewardsUseCase,
+            ),
+          ),
         ],
         child: MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -193,7 +221,7 @@ class MyApp extends StatelessWidget {
               return const AuthPage();
             }
             if (state is AuthSuccess) {
-              return const ProjectsListPage();
+              return const MainNavigationPage();
             }
             if (state is GoogleAuthPendingRegistration) {
               return RegisterPage(

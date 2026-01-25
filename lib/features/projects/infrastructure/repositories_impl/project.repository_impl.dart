@@ -74,6 +74,19 @@ class ProjectRepositoryImpl implements ProjectRepository {
   }
 
   @override
+  Future<Project?> getProjectByRewardId(String rewardId) async {
+    try {
+      final dto = await _datasource.getProjectByRewardId(rewardId);
+      if (dto == null) {
+        return null;
+      }
+      return dto.toDomain();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  @override
   Future<void> deleteProject(String id) async {
     try {
       await _datasource.deleteProject(id);

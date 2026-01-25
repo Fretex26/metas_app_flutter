@@ -3,9 +3,15 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:metas_app/features/auth/presentation/components/status_badge.dart';
 import 'package:metas_app/features/projects/application/use_cases/create_checklist_item.use_case.dart';
 import 'package:metas_app/features/projects/application/use_cases/get_checklist_items.use_case.dart';
+import 'package:metas_app/features/projects/application/use_cases/get_milestone_by_id.use_case.dart';
+import 'package:metas_app/features/projects/application/use_cases/get_milestone_tasks.use_case.dart';
+import 'package:metas_app/features/projects/application/use_cases/get_project_by_id.use_case.dart';
+import 'package:metas_app/features/projects/application/use_cases/get_project_milestones.use_case.dart';
+import 'package:metas_app/features/projects/application/use_cases/get_reward_by_id.use_case.dart';
 import 'package:metas_app/features/projects/application/use_cases/update_checklist_item.use_case.dart';
 import 'package:metas_app/features/projects/presentation/components/checklist_item_widget.dart';
 import 'package:metas_app/features/projects/presentation/components/delete_confirmation_dialog.dart';
+import 'package:metas_app/features/projects/presentation/components/reward_achieved_dialog.dart';
 import 'package:metas_app/features/projects/presentation/cubits/checklist.cubit.dart';
 import 'package:metas_app/features/projects/presentation/cubits/checklist.states.dart';
 import 'package:metas_app/features/projects/presentation/cubits/delete_checklist_item.cubit.dart';
@@ -15,9 +21,11 @@ import 'package:metas_app/features/projects/presentation/cubits/delete_task.stat
 import 'package:metas_app/features/projects/presentation/cubits/edit_task.cubit.dart';
 import 'package:metas_app/features/projects/presentation/cubits/task_detail.cubit.dart';
 import 'package:metas_app/features/projects/presentation/cubits/task_detail.states.dart';
+import 'package:metas_app/features/projects/presentation/helpers/reward_checker.helper.dart';
 import 'package:metas_app/features/projects/presentation/pages/create_checklist_item.page.dart';
 import 'package:metas_app/features/projects/presentation/pages/edit_checklist_item.page.dart';
 import 'package:metas_app/features/projects/presentation/pages/edit_task.page.dart';
+import 'package:metas_app/features/projects/presentation/pages/rewards_list.page.dart';
 
 /// Página que muestra el detalle completo de una task.
 /// 
@@ -448,12 +456,69 @@ class _TaskDetailContent extends StatelessWidget {
                               isLoading: updatingId == item.id,
                               onToggle: () async {
                                 try {
+                                  final wasUnchecked = item.isChecked;
                                   await context.read<ChecklistCubit>().toggleChecklistItem(taskId, item);
                                   if (context.mounted) {
                                     context.read<TaskDetailCubit>().loadTask(milestoneId, taskId);
+                                    
+                                    // Solo verificar rewards si se marcó como completado (no si se desmarcó)
+                                    if (!wasUnchecked) {
+                                      // Guardar referencias necesarias antes de operaciones asíncronas
+                                      final navigator = Navigator.of(context);
+                                      final getChecklistItemsUseCase = context.read<GetChecklistItemsUseCase>();
+                                      final getMilestoneByIdUseCase = context.read<GetMilestoneByIdUseCase>();
+                                      final getMilestoneTasksUseCase = context.read<GetMilestoneTasksUseCase>();
+                                      final getProjectByIdUseCase = context.read<GetProjectByIdUseCase>();
+                                      final getProjectMilestonesUseCase = context.read<GetProjectMilestonesUseCase>();
+                                      final getRewardByIdUseCase = context.read<GetRewardByIdUseCase>();
+                                      
+                                      // Ejecutar la verificación de forma completamente asíncrona
+                                      // Usar Future.microtask para ejecutar después del ciclo de eventos actual
+                                      Future.microtask(() async {
+                                        // Delay para asegurar que el backend y el widget estén estables
+                                        await Future.delayed(const Duration(milliseconds: 500));
+                                        
+                                        // Verificar si el navigator sigue montado (más estable que context.mounted)
+                                        if (!navigator.mounted) return;
+                                        
+                                        final rewardChecker = RewardCheckerHelper(
+                                          getChecklistItemsUseCase: getChecklistItemsUseCase,
+                                          getMilestoneByIdUseCase: getMilestoneByIdUseCase,
+                                          getMilestoneTasksUseCase: getMilestoneTasksUseCase,
+                                          getProjectByIdUseCase: getProjectByIdUseCase,
+                                          getProjectMilestonesUseCase: getProjectMilestonesUseCase,
+                                          getRewardByIdUseCase: getRewardByIdUseCase,
+                                        );
+                                        
+                                        final achievedRewards = await rewardChecker.checkRewardsAchieved(
+                                          projectId,
+                                          milestoneId,
+                                          taskId,
+                                        );
+                                        
+                                        // Verificar el navigator antes de mostrar el diálogo
+                                        if (navigator.mounted && achievedRewards.isNotEmpty) {
+                                          // Usar el contexto del navigator para mostrar el diálogo
+                                          final dialogContext = navigator.context;
+                                          if (dialogContext.mounted) {
+                                            await RewardAchievedDialog.show(
+                                              context: dialogContext,
+                                              rewards: achievedRewards,
+                                              onViewDetails: () {
+                                                navigator.push(
+                                                  MaterialPageRoute(
+                                                    builder: (context) => RewardsListPage(),
+                                                  ),
+                                                );
+                                              },
+                                            );
+                                          }
+                                        }
+                                      });
+                                    }
                                   }
                                 } catch (e) {
-                                  // ChecklistCubit no disponible
+                                  // ChecklistCubit no disponible o error al verificar rewards
                                   if (context.mounted) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(content: Text('Error al actualizar checklist item')),

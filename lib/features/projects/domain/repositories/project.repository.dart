@@ -67,6 +67,20 @@ abstract class ProjectRepository {
   /// - El usuario no está autenticado (401)
   Future<Project> updateProject(String id, UpdateProjectDto dto);
 
+  /// Obtiene un proyecto por su rewardId.
+  /// 
+  /// Busca entre todos los proyectos del usuario el que tiene el rewardId especificado.
+  /// 
+  /// [rewardId] - Identificador único de la reward (UUID)
+  /// 
+  /// Retorna el proyecto si existe y el usuario tiene permisos.
+  /// Retorna null si no se encuentra ningún proyecto con ese rewardId.
+  /// 
+  /// Lanza una excepción si:
+  /// - El usuario no está autenticado (401)
+  /// - Hay un error de red o del servidor
+  Future<Project?> getProjectByRewardId(String rewardId);
+
   /// Elimina un proyecto existente.
   /// 
   /// [id] - Identificador único del proyecto (UUID)

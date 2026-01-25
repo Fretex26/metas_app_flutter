@@ -249,6 +249,53 @@ class ProjectDatasource {
     }
   }
 
+  /// Obtiene un proyecto por su rewardId.
+  /// 
+  /// Busca entre todos los proyectos del usuario el que tiene el rewardId especificado.
+  /// 
+  /// [rewardId] - Identificador único de la reward (UUID)
+  /// 
+  /// Retorna el proyecto si existe y el usuario tiene permisos.
+  /// Retorna null si no se encuentra ningún proyecto con ese rewardId.
+  /// 
+  /// Lanza una excepción si:
+  /// - El usuario no está autenticado (401)
+  /// - Hay un error de red o del servidor
+  Future<ProjectResponseDto?> getProjectByRewardId(String rewardId) async {
+    try {
+      final token = await _getAuthToken();
+      final response = await _dio.get(
+        '${ApiConfig.baseUrl}/api/projects',
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+        ),
+      );
+
+      final List<dynamic> data = response.data as List<dynamic>;
+      final projects = data.map((json) => ProjectResponseDto.fromJson(json as Map<String, dynamic>)).toList();
+      
+      // Buscar el proyecto que tiene el rewardId especificado
+      for (final project in projects) {
+        if (project.rewardId == rewardId) {
+          return project;
+        }
+      }
+      
+      // No se encontró ningún proyecto con ese rewardId
+      return null;
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        throw Exception('No autorizado. Por favor, inicia sesión nuevamente.');
+      }
+      rethrow;
+    } catch (e) {
+      throw Exception('Error al obtener proyecto por rewardId: $e');
+    }
+  }
+
   /// Elimina un proyecto existente.
   /// 
   /// Endpoint: DELETE /api/projects/:id
