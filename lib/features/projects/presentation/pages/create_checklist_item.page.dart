@@ -57,7 +57,8 @@ class _CreateChecklistItemPageState extends State<CreateChecklistItemPage> {
       ),
       body: BlocConsumer<ChecklistCubit, ChecklistState>(
         listener: (context, state) {
-          if (state is ChecklistLoaded) {
+          if (state is ChecklistItemCreated) {
+            // Regresar a la página anterior (TaskDetailPage) en lugar de ir al milestone
             Navigator.pop(context, true);
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Checklist item creado exitosamente')),

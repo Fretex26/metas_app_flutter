@@ -381,6 +381,7 @@ class _MilestoneDetailContent extends StatelessWidget {
                               pageContext,
                               MaterialPageRoute(
                                 builder: (context) => SprintDetailPage(
+                                  projectId: projectId,
                                   milestoneId: milestoneId,
                                   sprintId: sprint.id,
                                 ),
@@ -479,7 +480,9 @@ class _MilestoneDetailContent extends StatelessWidget {
                             ),
                           ),
                         ).then((_) {
-                          pageContext.read<MilestoneDetailCubit>().loadMilestone(projectId, milestoneId);
+                          if (pageContext.mounted) {
+                            pageContext.read<MilestoneDetailCubit>().loadMilestone(projectId, milestoneId);
+                          }
                         });
                       },
                     );

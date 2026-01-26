@@ -18,6 +18,9 @@ class MyTextFieldMultiline extends StatelessWidget {
   /// Indica si el campo está habilitado
   final bool enabled;
 
+  /// Validador opcional para el campo de texto
+  final String? Function(String?)? validator;
+
   /// Constructor del campo de texto multilínea
   const MyTextFieldMultiline({
     super.key,
@@ -25,27 +28,42 @@ class MyTextFieldMultiline extends StatelessWidget {
     required this.hintText,
     this.maxLines = 3,
     this.enabled = true,
+    this.validator,
   });
+
+  InputDecoration _buildDecoration(BuildContext context) {
+    return InputDecoration(
+      enabledBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: Theme.of(context).colorScheme.tertiary),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: Theme.of(context).colorScheme.primary),
+      ),
+      hintText: hintText,
+      hintStyle: TextStyle(color: Theme.of(context).colorScheme.primary),
+      fillColor: Theme.of(context).colorScheme.secondary,
+      filled: true,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (validator != null) {
+      return TextFormField(
+        controller: controller,
+        enabled: enabled,
+        maxLines: maxLines,
+        validator: validator,
+        decoration: _buildDecoration(context),
+      );
+    }
+
     return TextField(
       controller: controller,
       enabled: enabled,
       maxLines: maxLines,
-      decoration: InputDecoration(
-        enabledBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Theme.of(context).colorScheme.tertiary),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Theme.of(context).colorScheme.primary),
-        ),
-        hintText: hintText,
-        hintStyle: TextStyle(color: Theme.of(context).colorScheme.primary),
-        fillColor: Theme.of(context).colorScheme.secondary,
-        filled: true,
-      ),
+      decoration: _buildDecoration(context),
     );
   }
 }

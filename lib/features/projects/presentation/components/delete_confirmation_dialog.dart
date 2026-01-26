@@ -20,12 +20,12 @@ class DeleteConfirmationDialog extends StatelessWidget {
 
   /// Constructor del diálogo de confirmación
   const DeleteConfirmationDialog({
-    Key? key,
+    super.key,
     required this.title,
     required this.message,
     this.confirmText = 'Eliminar',
     this.cancelText = 'Cancelar',
-  }) : super(key: key);
+  });
 
   /// Muestra el diálogo de confirmación y retorna true si el usuario confirma.
   /// 

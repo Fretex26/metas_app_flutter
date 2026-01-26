@@ -35,23 +35,35 @@ import 'package:metas_app/features/projects/application/use_cases/get_sprint_by_
 import 'package:metas_app/features/projects/application/use_cases/update_sprint.use_case.dart';
 import 'package:metas_app/features/projects/application/use_cases/delete_sprint.use_case.dart';
 import 'package:metas_app/features/projects/application/use_cases/get_sprint_tasks.use_case.dart';
+import 'package:metas_app/features/projects/application/use_cases/create_review.use_case.dart';
+import 'package:metas_app/features/projects/application/use_cases/get_sprint_review.use_case.dart';
+import 'package:metas_app/features/projects/application/use_cases/create_retrospective.use_case.dart';
+import 'package:metas_app/features/projects/application/use_cases/get_sprint_retrospective.use_case.dart';
+import 'package:metas_app/features/projects/application/use_cases/get_pending_sprints.use_case.dart';
 import 'package:metas_app/features/projects/domain/repositories/checklist_item.repository.dart';
 import 'package:metas_app/features/projects/domain/repositories/milestone.repository.dart';
 import 'package:metas_app/features/projects/domain/repositories/project.repository.dart';
 import 'package:metas_app/features/projects/domain/repositories/reward.repository.dart';
 import 'package:metas_app/features/projects/domain/repositories/task.repository.dart';
 import 'package:metas_app/features/projects/domain/repositories/sprint.repository.dart';
+import 'package:metas_app/features/projects/domain/repositories/review.repository.dart';
+import 'package:metas_app/features/projects/domain/repositories/retrospective.repository.dart';
+import 'package:metas_app/features/projects/domain/repositories/pending_sprints.repository.dart';
 import 'package:metas_app/features/projects/infrastructure/repositories_impl/checklist_item.repository_impl.dart';
 import 'package:metas_app/features/projects/infrastructure/repositories_impl/milestone.repository_impl.dart';
 import 'package:metas_app/features/projects/infrastructure/repositories_impl/project.repository_impl.dart';
 import 'package:metas_app/features/projects/infrastructure/repositories_impl/reward.repository_impl.dart';
 import 'package:metas_app/features/projects/infrastructure/repositories_impl/task.repository_impl.dart';
 import 'package:metas_app/features/projects/infrastructure/repositories_impl/sprint.repository_impl.dart';
+import 'package:metas_app/features/projects/infrastructure/repositories_impl/review.repository_impl.dart';
+import 'package:metas_app/features/projects/infrastructure/repositories_impl/retrospective.repository_impl.dart';
+import 'package:metas_app/features/projects/infrastructure/repositories_impl/pending_sprints.repository_impl.dart';
 import 'package:metas_app/features/projects/presentation/cubits/create_milestone.cubit.dart';
 import 'package:metas_app/features/projects/presentation/cubits/create_project.cubit.dart';
 import 'package:metas_app/features/projects/presentation/cubits/create_task.cubit.dart';
 import 'package:metas_app/features/projects/presentation/cubits/projects.cubit.dart';
 import 'package:metas_app/features/projects/presentation/cubits/rewards.cubit.dart';
+import 'package:metas_app/features/projects/presentation/cubits/pending_sprints.cubit.dart';
 import 'package:metas_app/features/projects/presentation/pages/main_navigation.page.dart';
 import 'package:metas_app/firebase_options.dart';
 import 'package:flutter/material.dart';
@@ -78,6 +90,9 @@ class MyApp extends StatelessWidget {
   final ChecklistItemRepository _checklistItemRepository = ChecklistItemRepositoryImpl();
   final RewardRepository _rewardRepository = RewardRepositoryImpl();
   final SprintRepository _sprintRepository = SprintRepositoryImpl();
+  final ReviewRepository _reviewRepository = ReviewRepositoryImpl();
+  final RetrospectiveRepository _retrospectiveRepository = RetrospectiveRepositoryImpl();
+  final PendingSprintsRepository _pendingSprintsRepository = PendingSprintsRepositoryImpl();
 
   // Use Cases
   GetUserProjectsUseCase get _getUserProjectsUseCase => GetUserProjectsUseCase(_projectRepository);
@@ -114,6 +129,14 @@ class MyApp extends StatelessWidget {
   UpdateSprintUseCase get _updateSprintUseCase => UpdateSprintUseCase(_sprintRepository);
   DeleteSprintUseCase get _deleteSprintUseCase => DeleteSprintUseCase(_sprintRepository);
   GetSprintTasksUseCase get _getSprintTasksUseCase => GetSprintTasksUseCase(_sprintRepository);
+  // Review use cases
+  CreateReviewUseCase get _createReviewUseCase => CreateReviewUseCase(_reviewRepository);
+  GetSprintReviewUseCase get _getSprintReviewUseCase => GetSprintReviewUseCase(_reviewRepository);
+  // Retrospective use cases
+  CreateRetrospectiveUseCase get _createRetrospectiveUseCase => CreateRetrospectiveUseCase(_retrospectiveRepository);
+  GetSprintRetrospectiveUseCase get _getSprintRetrospectiveUseCase => GetSprintRetrospectiveUseCase(_retrospectiveRepository);
+  // Pending sprints use case
+  GetPendingSprintsUseCase get _getPendingSprintsUseCase => GetPendingSprintsUseCase(_pendingSprintsRepository);
 
   @override
   Widget build(BuildContext context) {
@@ -212,6 +235,24 @@ class MyApp extends StatelessWidget {
         RepositoryProvider<GetSprintTasksUseCase>.value(
           value: _getSprintTasksUseCase,
         ),
+        // Review use cases
+        RepositoryProvider<CreateReviewUseCase>.value(
+          value: _createReviewUseCase,
+        ),
+        RepositoryProvider<GetSprintReviewUseCase>.value(
+          value: _getSprintReviewUseCase,
+        ),
+        // Retrospective use cases
+        RepositoryProvider<CreateRetrospectiveUseCase>.value(
+          value: _createRetrospectiveUseCase,
+        ),
+        RepositoryProvider<GetSprintRetrospectiveUseCase>.value(
+          value: _getSprintRetrospectiveUseCase,
+        ),
+        // Pending sprints use case
+        RepositoryProvider<GetPendingSprintsUseCase>.value(
+          value: _getPendingSprintsUseCase,
+        ),
       ],
       child: MultiBlocProvider(
         providers: [
@@ -243,6 +284,12 @@ class MyApp extends StatelessWidget {
             create: (context) => RewardsCubit(
               getRewardByIdUseCase: _getRewardByIdUseCase,
               getUserRewardsUseCase: _getUserRewardsUseCase,
+            ),
+          ),
+          // Pending sprints
+          BlocProvider<PendingSprintsCubit>(
+            create: (context) => PendingSprintsCubit(
+              getPendingSprintsUseCase: _getPendingSprintsUseCase,
             ),
           ),
         ],

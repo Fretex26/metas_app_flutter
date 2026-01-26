@@ -1,14 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:metas_app/features/projects/application/use_cases/create_checklist_item.use_case.dart';
+import 'package:metas_app/features/projects/application/use_cases/get_checklist_items.use_case.dart';
+import 'package:metas_app/features/projects/application/use_cases/get_task_by_id.use_case.dart';
+import 'package:metas_app/features/projects/application/use_cases/update_checklist_item.use_case.dart';
 import 'package:metas_app/features/projects/presentation/components/delete_confirmation_dialog.dart';
 import 'package:metas_app/features/projects/presentation/components/task_card.dart';
+import 'package:metas_app/features/projects/presentation/cubits/checklist.cubit.dart';
 import 'package:metas_app/features/projects/presentation/cubits/delete_sprint.cubit.dart';
 import 'package:metas_app/features/projects/presentation/pages/create_task.page.dart';
 import 'package:metas_app/features/projects/presentation/cubits/delete_sprint.states.dart';
 import 'package:metas_app/features/projects/presentation/cubits/edit_sprint.cubit.dart';
 import 'package:metas_app/features/projects/presentation/cubits/sprint_detail.cubit.dart';
 import 'package:metas_app/features/projects/presentation/cubits/sprint_detail.states.dart';
+import 'package:metas_app/features/projects/presentation/cubits/task_detail.cubit.dart';
 import 'package:metas_app/features/projects/presentation/pages/edit_sprint.page.dart';
+import 'package:metas_app/features/projects/presentation/pages/create_review.page.dart';
+import 'package:metas_app/features/projects/presentation/pages/review_detail.page.dart';
+import 'package:metas_app/features/projects/presentation/pages/create_retrospective.page.dart';
+import 'package:metas_app/features/projects/presentation/pages/retrospective_detail.page.dart';
+import 'package:metas_app/features/projects/presentation/pages/task_detail.page.dart';
+import 'package:metas_app/features/projects/presentation/components/review_summary_card.dart';
+import 'package:metas_app/features/projects/presentation/components/retrospective_summary_card.dart';
+import 'package:metas_app/features/projects/presentation/cubits/get_sprint_review.cubit.dart';
+import 'package:metas_app/features/projects/presentation/cubits/get_sprint_review.states.dart';
+import 'package:metas_app/features/projects/presentation/cubits/get_sprint_retrospective.cubit.dart';
+import 'package:metas_app/features/projects/presentation/cubits/get_sprint_retrospective.states.dart';
+import 'package:metas_app/features/projects/presentation/cubits/create_review.cubit.dart';
+import 'package:metas_app/features/projects/presentation/cubits/create_retrospective.cubit.dart';
 
 /// Página que muestra el detalle completo de un sprint.
 /// 
@@ -18,6 +37,9 @@ import 'package:metas_app/features/projects/presentation/pages/edit_sprint.page.
 /// - Pull-to-refresh para actualizar
 /// - Opciones para editar y eliminar el sprint
 class SprintDetailPage extends StatelessWidget {
+  /// Identificador único del proyecto (para navegación)
+  final String projectId;
+
   /// Identificador único del milestone (para navegación)
   final String milestoneId;
 
@@ -27,6 +49,7 @@ class SprintDetailPage extends StatelessWidget {
   /// Constructor de la página de detalle de sprint
   const SprintDetailPage({
     super.key,
+    required this.projectId,
     required this.milestoneId,
     required this.sprintId,
   });
@@ -91,10 +114,21 @@ class SprintDetailPage extends StatelessWidget {
                       deleteSprintUseCase: context.read(),
                     ),
                   ),
+                  BlocProvider(
+                    create: (context) => GetSprintReviewCubit(
+                      getSprintReviewUseCase: context.read(),
+                    )..loadReview(sprintId),
+                  ),
+                  BlocProvider(
+                    create: (context) => GetSprintRetrospectiveCubit(
+                      getSprintRetrospectiveUseCase: context.read(),
+                    )..loadRetrospective(sprintId),
+                  ),
                 ],
                 child: _SprintDetailContent(
                   sprint: state.sprint,
                   tasks: state.tasks,
+                  projectId: projectId,
                   milestoneId: milestoneId,
                   sprintId: sprintId,
                   pageContext: pageContext,
@@ -120,6 +154,7 @@ class SprintDetailPage extends StatelessWidget {
 class _SprintDetailContent extends StatelessWidget {
   final dynamic sprint;
   final List<dynamic> tasks;
+  final String projectId;
   final String milestoneId;
   final String sprintId;
   final BuildContext pageContext;
@@ -127,6 +162,7 @@ class _SprintDetailContent extends StatelessWidget {
   const _SprintDetailContent({
     required this.sprint,
     required this.tasks,
+    required this.projectId,
     required this.milestoneId,
     required this.sprintId,
     required this.pageContext,
@@ -173,11 +209,20 @@ class _SprintDetailContent extends StatelessWidget {
     context.read<DeleteSprintCubit>().deleteSprint(milestoneId, sprintId);
   }
 
+  bool _isSprintFinished() {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final endDate = DateTime(sprint.endDate.year, sprint.endDate.month, sprint.endDate.day);
+    // El sprint está finalizado si la fecha de fin es anterior o igual a hoy
+    return endDate.isBefore(today) || endDate == today;
+  }
+
   @override
   Widget build(BuildContext context) {
     final duration = sprint.durationInDays;
     final completedTasks = tasks.where((t) => t.status == 'completed').length;
     final totalTasks = tasks.length;
+    final isFinished = _isSprintFinished();
 
     return BlocListener<DeleteSprintCubit, DeleteSprintState>(
       listener: (context, state) {
@@ -403,17 +448,319 @@ class _SprintDetailContent extends StatelessWidget {
                       task: task,
                       completedChecklistItems: 0,
                       totalChecklistItems: 0,
-                      onTap: () {
-                        // Navegar al detalle de la task si es necesario
-                        // Por ahora solo mostramos la lista
+                      onTap: () async {
+                        // Obtener los use cases necesarios para TaskDetailPage
+                        final getTaskByIdUseCase = context.read<GetTaskByIdUseCase>();
+                        final getChecklistItemsUseCase = context.read<GetChecklistItemsUseCase>();
+                        final createChecklistItemUseCase = context.read<CreateChecklistItemUseCase>();
+                        final updateChecklistItemUseCase = context.read<UpdateChecklistItemUseCase>();
+                        
+                        // Navegar al detalle de la task
+                        await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => MultiBlocProvider(
+                              providers: [
+                                BlocProvider(
+                                  create: (_) => TaskDetailCubit(
+                                    getTaskByIdUseCase: getTaskByIdUseCase,
+                                    getChecklistItemsUseCase: getChecklistItemsUseCase,
+                                  )..loadTask(milestoneId, task.id),
+                                ),
+                                BlocProvider(
+                                  create: (_) => ChecklistCubit(
+                                    getChecklistItemsUseCase: getChecklistItemsUseCase,
+                                    createChecklistItemUseCase: createChecklistItemUseCase,
+                                    updateChecklistItemUseCase: updateChecklistItemUseCase,
+                                  )..loadChecklistItems(task.id),
+                                ),
+                              ],
+                              child: TaskDetailPage(
+                                projectId: projectId,
+                                milestoneId: milestoneId,
+                                taskId: task.id,
+                              ),
+                            ),
+                          ),
+                        );
+                        
+                        // Refrescar el sprint después de regresar
+                        if (pageContext.mounted) {
+                          pageContext.read<SprintDetailCubit>().refresh(milestoneId, sprintId);
+                        }
                       },
                     );
                   }),
+                if (isFinished) ...[
+                  const SizedBox(height: 32),
+                  _buildReviewSection(context),
+                  const SizedBox(height: 24),
+                  _buildRetrospectiveSection(context),
+                ] else ...[
+                  const SizedBox(height: 32),
+                  Card(
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            color: Theme.of(context).colorScheme.onSurface,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Las reviews y retrospectivas solo se pueden realizar al finalizar el sprint',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Theme.of(context).colorScheme.onSurface,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildReviewSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Text(
+                'Review del Sprint',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+            ),
+            BlocBuilder<GetSprintReviewCubit, GetSprintReviewState>(
+              builder: (context, state) {
+                if (state is GetSprintReviewLoaded && state.review != null) {
+                  return TextButton.icon(
+                    onPressed: () async {
+                      final result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ReviewDetailPage(sprintId: sprintId),
+                        ),
+                      );
+                      if (result != null && context.mounted) {
+                        context.read<GetSprintReviewCubit>().refresh(sprintId);
+                      }
+                    },
+                    icon: const Icon(Icons.visibility),
+                    label: const Text('Ver Review'),
+                  );
+                } else {
+                  return TextButton.icon(
+                    onPressed: () async {
+                      final result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => BlocProvider(
+                            create: (context) => CreateReviewCubit(
+                              createReviewUseCase: context.read(),
+                            ),
+                            child: CreateReviewPage(sprintId: sprintId),
+                          ),
+                        ),
+                      );
+                      if (result != null && context.mounted) {
+                        context.read<GetSprintReviewCubit>().refresh(sprintId);
+                      }
+                    },
+                    icon: const Icon(Icons.add),
+                    label: const Text('Crear Review'),
+                  );
+                }
+              },
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        BlocBuilder<GetSprintReviewCubit, GetSprintReviewState>(
+          builder: (context, state) {
+            if (state is GetSprintReviewLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (state is GetSprintReviewError) {
+              return Card(
+                color: Colors.red.withValues(alpha: 0.1),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    'Error al cargar review: ${state.message}',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ),
+              );
+            }
+            if (state is GetSprintReviewLoaded) {
+              if (state.review == null) {
+                return Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.reviews_outlined,
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'No hay review para este sprint. Crea una para registrar el progreso y puntos extra.',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+              return ReviewSummaryCard(review: state.review!);
+            }
+            return const SizedBox.shrink();
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRetrospectiveSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Text(
+                'Retrospectiva del Sprint',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+            ),
+            BlocBuilder<GetSprintRetrospectiveCubit, GetSprintRetrospectiveState>(
+              builder: (context, state) {
+                if (state is GetSprintRetrospectiveLoaded && state.retrospective != null) {
+                  return TextButton.icon(
+                    onPressed: () async {
+                      final result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => RetrospectiveDetailPage(sprintId: sprintId),
+                        ),
+                      );
+                      if (result != null && context.mounted) {
+                        context.read<GetSprintRetrospectiveCubit>().refresh(sprintId);
+                      }
+                    },
+                    icon: const Icon(Icons.visibility),
+                    label: const Text('Ver Retrospectiva'),
+                  );
+                } else {
+                  return TextButton.icon(
+                    onPressed: () async {
+                      final result = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => BlocProvider(
+                            create: (context) => CreateRetrospectiveCubit(
+                              createRetrospectiveUseCase: context.read(),
+                            ),
+                            child: CreateRetrospectivePage(sprintId: sprintId),
+                          ),
+                        ),
+                      );
+                      if (result != null && context.mounted) {
+                        context.read<GetSprintRetrospectiveCubit>().refresh(sprintId);
+                      }
+                    },
+                    icon: const Icon(Icons.add),
+                    label: const Text('Crear Retrospectiva'),
+                  );
+                }
+              },
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        BlocBuilder<GetSprintRetrospectiveCubit, GetSprintRetrospectiveState>(
+          builder: (context, state) {
+            if (state is GetSprintRetrospectiveLoading) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (state is GetSprintRetrospectiveError) {
+              return Card(
+                color: Colors.red.withValues(alpha: 0.1),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text(
+                    'Error al cargar retrospectiva: ${state.message}',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                    ),
+                  ),
+                ),
+              );
+            }
+            if (state is GetSprintRetrospectiveLoaded) {
+              if (state.retrospective == null) {
+                return Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.history,
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'No hay retrospectiva para este sprint. Crea una para analizar lo que salió bien, lo que salió mal y proponer mejoras.',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+              return RetrospectiveSummaryCard(retrospective: state.retrospective!);
+            }
+            return const SizedBox.shrink();
+          },
+        ),
+      ],
     );
   }
 }

@@ -221,7 +221,7 @@ class _EditTaskPageState extends State<EditTaskPage> {
                   )
                 else if (_sprints.isNotEmpty) ...[
                   DropdownButtonFormField<String>(
-                    value: _selectedSprintId,
+                    initialValue: _selectedSprintId,
                     decoration: InputDecoration(
                       labelText: 'Sprint',
                       hintText: 'Selecciona un sprint',

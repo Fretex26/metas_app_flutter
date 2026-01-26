@@ -70,7 +70,7 @@ class RewardDetailPage extends StatelessWidget {
     } catch (e) {
       // Si el error ya es un String, lanzarlo tal cual
       if (e is String) {
-        throw e;
+        rethrow;
       }
       // Si es otro tipo de error, convertirlo a mensaje amigable
       throw 'Error al abrir la URL: ${e.toString()}';

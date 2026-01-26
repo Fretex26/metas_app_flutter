@@ -230,7 +230,7 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
                     )
                   else if (_sprints.isNotEmpty) ...[
                     DropdownButtonFormField<String>(
-                      value: _selectedSprintId,
+                      initialValue: _selectedSprintId,
                       decoration: InputDecoration(
                         labelText: 'Sprint (opcional)',
                         hintText: 'Selecciona un sprint',
