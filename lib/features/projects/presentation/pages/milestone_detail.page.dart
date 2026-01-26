@@ -8,14 +8,19 @@ import 'package:metas_app/features/projects/application/use_cases/update_checkli
 import 'package:metas_app/features/projects/presentation/components/delete_confirmation_dialog.dart';
 import 'package:metas_app/features/projects/presentation/components/task_card.dart';
 import 'package:metas_app/features/projects/presentation/cubits/checklist.cubit.dart';
+import 'package:metas_app/features/projects/presentation/cubits/create_sprint.cubit.dart';
 import 'package:metas_app/features/projects/presentation/cubits/delete_milestone.cubit.dart';
 import 'package:metas_app/features/projects/presentation/cubits/delete_milestone.states.dart';
 import 'package:metas_app/features/projects/presentation/cubits/edit_milestone.cubit.dart';
 import 'package:metas_app/features/projects/presentation/cubits/milestone_detail.cubit.dart';
 import 'package:metas_app/features/projects/presentation/cubits/milestone_detail.states.dart';
 import 'package:metas_app/features/projects/presentation/cubits/task_detail.cubit.dart';
+import 'package:metas_app/features/projects/application/use_cases/get_milestone_sprints.use_case.dart';
+import 'package:metas_app/features/projects/presentation/components/sprint_card.dart';
+import 'package:metas_app/features/projects/presentation/pages/create_sprint.page.dart';
 import 'package:metas_app/features/projects/presentation/pages/create_task.page.dart';
 import 'package:metas_app/features/projects/presentation/pages/edit_milestone.page.dart';
+import 'package:metas_app/features/projects/presentation/pages/sprint_detail.page.dart';
 import 'package:metas_app/features/projects/presentation/pages/task_detail.page.dart';
 
 /// Página que muestra el detalle completo de un milestone.
@@ -280,6 +285,115 @@ class _MilestoneDetailContent extends StatelessWidget {
                       ],
                     ),
                   ),
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Sprints',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.add),
+                      onPressed: () async {
+                        final result = await Navigator.push(
+                          pageContext,
+                          MaterialPageRoute(
+                            builder: (context) => BlocProvider(
+                              create: (context) => CreateSprintCubit(
+                                createSprintUseCase: context.read(),
+                              ),
+                              child: CreateSprintPage(milestoneId: milestoneId),
+                            ),
+                          ),
+                        );
+                        if (result != null && pageContext.mounted) {
+                          pageContext.read<MilestoneDetailCubit>().loadMilestone(projectId, milestoneId);
+                        }
+                      },
+                      tooltip: 'Crear Sprint',
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                FutureBuilder(
+                  future: context.read<GetMilestoneSprintsUseCase>()(milestoneId),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(16),
+                          child: CircularProgressIndicator(),
+                        ),
+                      );
+                    }
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Text(
+                            'Error al cargar sprints: ${snapshot.error}',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.error,
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+                    final sprints = snapshot.data ?? [];
+                    if (sprints.isEmpty) {
+                      return Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Column(
+                            children: [
+                              Icon(
+                                Icons.timeline_outlined,
+                                size: 48,
+                                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'No hay sprints aún',
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }
+                    return Column(
+                      children: sprints.map((sprint) {
+                        // Contar tasks del sprint
+                        final sprintTasks = tasks.where((t) => t.sprintId == sprint.id).toList();
+                        return SprintCard(
+                          sprint: sprint,
+                          taskCount: sprintTasks.length,
+                          onTap: () async {
+                            final result = await Navigator.push(
+                              pageContext,
+                              MaterialPageRoute(
+                                builder: (context) => SprintDetailPage(
+                                  milestoneId: milestoneId,
+                                  sprintId: sprint.id,
+                                ),
+                              ),
+                            );
+                            if (result != null && pageContext.mounted) {
+                              pageContext.read<MilestoneDetailCubit>().loadMilestone(projectId, milestoneId);
+                            }
+                          },
+                        );
+                      }).toList(),
+                    );
+                  },
                 ),
                 const SizedBox(height: 24),
                 Row(

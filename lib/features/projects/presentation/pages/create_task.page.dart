@@ -5,6 +5,8 @@ import 'package:metas_app/features/auth/presentation/components/my_date_picker.d
 import 'package:metas_app/features/auth/presentation/components/my_textfield.dart';
 import 'package:metas_app/features/auth/presentation/components/my_textfield_multiline.dart';
 import 'package:metas_app/features/auth/presentation/components/resource_form_field.dart';
+import 'package:metas_app/features/projects/application/use_cases/get_milestone_sprints.use_case.dart';
+import 'package:metas_app/features/projects/domain/entities/sprint.dart';
 import 'package:metas_app/features/projects/infrastructure/dto/create_task.dto.dart';
 import 'package:metas_app/features/projects/presentation/cubits/create_task.cubit.dart';
 import 'package:metas_app/features/projects/presentation/cubits/create_task.states.dart';
@@ -15,6 +17,7 @@ import 'package:metas_app/features/projects/presentation/cubits/create_task.stat
 /// - Nombre de la task (requerido)
 /// - Descripción (opcional)
 /// - Fechas de inicio y fin (requeridas, la de fin debe ser posterior a la de inicio)
+/// - Selector de sprint (opcional)
 /// - Puntos de incentivo (opcional)
 /// - Formularios dinámicos para recursos disponibles y necesarios
 /// 
@@ -24,8 +27,16 @@ class CreateTaskPage extends StatefulWidget {
   /// Identificador único del milestone al que pertenecerá la task
   final String milestoneId;
 
+  /// Identificador único del sprint al que se asignará la task (opcional)
+  /// Si se proporciona, se pre-seleccionará en el dropdown
+  final String? initialSprintId;
+
   /// Constructor de la página de creación de task
-  const CreateTaskPage({super.key, required this.milestoneId});
+  const CreateTaskPage({
+    super.key,
+    required this.milestoneId,
+    this.initialSprintId,
+  });
 
   @override
   State<CreateTaskPage> createState() => _CreateTaskPageState();
@@ -37,10 +48,50 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
   final _descriptionController = TextEditingController();
   final _incentivePointsController = TextEditingController();
 
+  @override
+  void initState() {
+    super.initState();
+    _loadSprints();
+  }
+
+  Future<void> _loadSprints() async {
+    setState(() {
+      _loadingSprints = true;
+    });
+    try {
+      final sprints = await context.read<GetMilestoneSprintsUseCase>()(widget.milestoneId);
+      setState(() {
+        _sprints = sprints;
+        _loadingSprints = false;
+        // Si hay un sprint inicial y existe en la lista, seleccionarlo
+        if (widget.initialSprintId != null &&
+            sprints.any((s) => s.id == widget.initialSprintId)) {
+          _selectedSprintId = widget.initialSprintId;
+          final selectedSprint = sprints.firstWhere((s) => s.id == widget.initialSprintId);
+          // Pre-llenar las fechas con el rango del sprint
+          _startDate = selectedSprint.startDate;
+          _endDate = selectedSprint.endDate;
+        }
+      });
+    } catch (e) {
+      setState(() {
+        _loadingSprints = false;
+      });
+      // No mostrar error, simplemente no mostrar sprints
+    }
+  }
+
   DateTime? _startDate;
   DateTime? _endDate;
+  String? _selectedSprintId;
+  List<Sprint> _sprints = [];
+  bool _loadingSprints = false;
   Map<String, dynamic>? _resourcesAvailable;
   Map<String, dynamic>? _resourcesNeeded;
+
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
+  }
 
   @override
   void dispose() {
@@ -69,8 +120,25 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
       return;
     }
 
+    // Validar que si se seleccionó un sprint, las fechas estén dentro del rango del sprint
+    if (_selectedSprintId != null) {
+      final selectedSprint = _sprints.firstWhere((s) => s.id == _selectedSprintId);
+      if (_startDate!.isBefore(selectedSprint.startDate) ||
+          _endDate!.isAfter(selectedSprint.endDate)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Las fechas de la task deben estar dentro del rango del sprint seleccionado',
+            ),
+          ),
+        );
+        return;
+      }
+    }
+
     final dto = CreateTaskDto(
       milestoneId: widget.milestoneId,
+      sprintId: _selectedSprintId,
       name: _nameController.text,
       description: _descriptionController.text.isEmpty ? null : _descriptionController.text,
       startDate:
@@ -154,6 +222,108 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
                     requireFirstDate: true,
                     missingFirstDateMessage: 'Selecciona primero la fecha de inicio',
                   ),
+                  const SizedBox(height: 16),
+                  if (_loadingSprints)
+                    const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Center(child: CircularProgressIndicator()),
+                    )
+                  else if (_sprints.isNotEmpty) ...[
+                    DropdownButtonFormField<String>(
+                      value: _selectedSprintId,
+                      decoration: InputDecoration(
+                        labelText: 'Sprint (opcional)',
+                        hintText: 'Selecciona un sprint',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderSide: BorderSide(
+                            color: Theme.of(context).colorScheme.tertiary,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderSide: BorderSide(
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        fillColor: Theme.of(context).colorScheme.secondary,
+                        filled: true,
+                      ),
+                      items: [
+                        const DropdownMenuItem<String>(
+                          value: null,
+                          child: Text('Sin sprint'),
+                        ),
+                        ..._sprints.map((sprint) {
+                          return DropdownMenuItem<String>(
+                            value: sprint.id,
+                            child: Text(
+                              sprint.name,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          );
+                        }),
+                      ],
+                      onChanged: isLoading
+                          ? null
+                          : (value) {
+                              setState(() {
+                                _selectedSprintId = value;
+                                // Si se selecciona un sprint, ajustar las fechas sugeridas
+                                if (value != null) {
+                                  final selectedSprint =
+                                      _sprints.firstWhere((s) => s.id == value);
+                                  if (_startDate == null ||
+                                      _startDate!.isBefore(selectedSprint.startDate)) {
+                                    _startDate = selectedSprint.startDate;
+                                  }
+                                  if (_endDate == null ||
+                                      _endDate!.isAfter(selectedSprint.endDate)) {
+                                    _endDate = selectedSprint.endDate;
+                                  }
+                                }
+                              });
+                            },
+                    ),
+                    if (_selectedSprintId != null) ...[
+                      const SizedBox(height: 8),
+                      Builder(
+                        builder: (context) {
+                          final selectedSprint =
+                              _sprints.firstWhere((s) => s.id == _selectedSprintId);
+                          return Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.info_outline,
+                                  size: 16,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Rango del sprint: ${_formatDate(selectedSprint.startDate)} - ${_formatDate(selectedSprint.endDate)}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Theme.of(context).colorScheme.primary,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                  ],
                   const SizedBox(height: 16),
                   MyTextField(
                     controller: _incentivePointsController,
