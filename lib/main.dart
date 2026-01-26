@@ -29,16 +29,24 @@ import 'package:metas_app/features/projects/application/use_cases/delete_milesto
 import 'package:metas_app/features/projects/application/use_cases/update_task.use_case.dart';
 import 'package:metas_app/features/projects/application/use_cases/delete_task.use_case.dart';
 import 'package:metas_app/features/projects/application/use_cases/delete_checklist_item.use_case.dart';
+import 'package:metas_app/features/projects/application/use_cases/create_sprint.use_case.dart';
+import 'package:metas_app/features/projects/application/use_cases/get_milestone_sprints.use_case.dart';
+import 'package:metas_app/features/projects/application/use_cases/get_sprint_by_id.use_case.dart';
+import 'package:metas_app/features/projects/application/use_cases/update_sprint.use_case.dart';
+import 'package:metas_app/features/projects/application/use_cases/delete_sprint.use_case.dart';
+import 'package:metas_app/features/projects/application/use_cases/get_sprint_tasks.use_case.dart';
 import 'package:metas_app/features/projects/domain/repositories/checklist_item.repository.dart';
 import 'package:metas_app/features/projects/domain/repositories/milestone.repository.dart';
 import 'package:metas_app/features/projects/domain/repositories/project.repository.dart';
 import 'package:metas_app/features/projects/domain/repositories/reward.repository.dart';
 import 'package:metas_app/features/projects/domain/repositories/task.repository.dart';
+import 'package:metas_app/features/projects/domain/repositories/sprint.repository.dart';
 import 'package:metas_app/features/projects/infrastructure/repositories_impl/checklist_item.repository_impl.dart';
 import 'package:metas_app/features/projects/infrastructure/repositories_impl/milestone.repository_impl.dart';
 import 'package:metas_app/features/projects/infrastructure/repositories_impl/project.repository_impl.dart';
 import 'package:metas_app/features/projects/infrastructure/repositories_impl/reward.repository_impl.dart';
 import 'package:metas_app/features/projects/infrastructure/repositories_impl/task.repository_impl.dart';
+import 'package:metas_app/features/projects/infrastructure/repositories_impl/sprint.repository_impl.dart';
 import 'package:metas_app/features/projects/presentation/cubits/create_milestone.cubit.dart';
 import 'package:metas_app/features/projects/presentation/cubits/create_project.cubit.dart';
 import 'package:metas_app/features/projects/presentation/cubits/create_task.cubit.dart';
@@ -69,6 +77,7 @@ class MyApp extends StatelessWidget {
   final TaskRepository _taskRepository = TaskRepositoryImpl();
   final ChecklistItemRepository _checklistItemRepository = ChecklistItemRepositoryImpl();
   final RewardRepository _rewardRepository = RewardRepositoryImpl();
+  final SprintRepository _sprintRepository = SprintRepositoryImpl();
 
   // Use Cases
   GetUserProjectsUseCase get _getUserProjectsUseCase => GetUserProjectsUseCase(_projectRepository);
@@ -98,6 +107,13 @@ class MyApp extends StatelessWidget {
   // Task update and delete
   UpdateTaskUseCase get _updateTaskUseCase => UpdateTaskUseCase(_taskRepository);
   DeleteTaskUseCase get _deleteTaskUseCase => DeleteTaskUseCase(_taskRepository);
+  // Sprint use cases
+  CreateSprintUseCase get _createSprintUseCase => CreateSprintUseCase(_sprintRepository);
+  GetMilestoneSprintsUseCase get _getMilestoneSprintsUseCase => GetMilestoneSprintsUseCase(_sprintRepository);
+  GetSprintByIdUseCase get _getSprintByIdUseCase => GetSprintByIdUseCase(_sprintRepository);
+  UpdateSprintUseCase get _updateSprintUseCase => UpdateSprintUseCase(_sprintRepository);
+  DeleteSprintUseCase get _deleteSprintUseCase => DeleteSprintUseCase(_sprintRepository);
+  GetSprintTasksUseCase get _getSprintTasksUseCase => GetSprintTasksUseCase(_sprintRepository);
 
   @override
   Widget build(BuildContext context) {
@@ -176,6 +192,25 @@ class MyApp extends StatelessWidget {
         ),
         RepositoryProvider<DeleteTaskUseCase>.value(
           value: _deleteTaskUseCase,
+        ),
+        // Sprint use cases
+        RepositoryProvider<CreateSprintUseCase>.value(
+          value: _createSprintUseCase,
+        ),
+        RepositoryProvider<GetMilestoneSprintsUseCase>.value(
+          value: _getMilestoneSprintsUseCase,
+        ),
+        RepositoryProvider<GetSprintByIdUseCase>.value(
+          value: _getSprintByIdUseCase,
+        ),
+        RepositoryProvider<UpdateSprintUseCase>.value(
+          value: _updateSprintUseCase,
+        ),
+        RepositoryProvider<DeleteSprintUseCase>.value(
+          value: _deleteSprintUseCase,
+        ),
+        RepositoryProvider<GetSprintTasksUseCase>.value(
+          value: _getSprintTasksUseCase,
         ),
       ],
       child: MultiBlocProvider(
