@@ -30,3 +30,9 @@ class ChecklistItemUpdated extends ChecklistState {
 
   ChecklistItemUpdated(this.item);
 }
+
+class ChecklistItemCreated extends ChecklistState {
+  final List<ChecklistItem> items;
+
+  ChecklistItemCreated(this.items);
+}

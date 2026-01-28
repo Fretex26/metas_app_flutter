@@ -49,7 +49,8 @@ class ChecklistCubit extends Cubit<ChecklistState> {
   Future<void> createChecklistItem(String taskId, CreateChecklistItemDto dto) async {
     try {
       await _createChecklistItemUseCase(taskId, dto);
-      await loadChecklistItems(taskId);
+      final items = await _getChecklistItemsUseCase(taskId);
+      emit(ChecklistItemCreated(items));
     } catch (e) {
       emit(ChecklistError(e.toString()));
     }
