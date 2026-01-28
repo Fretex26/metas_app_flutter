@@ -1,11 +1,17 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:metas_app/features/admin/application/use_cases/admin_sponsors.use_cases.dart';
+import 'package:metas_app/features/admin/presentation/pages/admin_sponsors.page.dart';
+import 'package:metas_app/features/auth/application/use_cases/get_auth_me.use_case.dart';
 import 'package:metas_app/features/auth/infrastructure/repositories_impl/firebase_auth.repositoryImpl.dart';
 import 'package:metas_app/features/auth/presentation/components/loding.dart';
 import 'package:metas_app/features/auth/presentation/cubits/auth.cubit.dart';
 import 'package:metas_app/features/auth/presentation/cubits/auth.states.dart';
+import 'package:metas_app/features/auth/presentation/pages/access_denied.page.dart';
 import 'package:metas_app/features/auth/presentation/pages/auth.page.dart';
 import 'package:metas_app/features/auth/presentation/pages/register.page.dart';
+import 'package:metas_app/features/auth/presentation/pages/sponsor_pending.page.dart';
+import 'package:metas_app/features/sponsor/application/use_cases/create_sponsor.use_case.dart';
 import 'package:metas_app/features/projects/application/use_cases/create_checklist_item.use_case.dart';
 import 'package:metas_app/features/projects/application/use_cases/create_milestone.use_case.dart';
 import 'package:metas_app/features/projects/application/use_cases/create_project.use_case.dart';
@@ -40,6 +46,9 @@ import 'package:metas_app/features/projects/application/use_cases/get_sprint_rev
 import 'package:metas_app/features/projects/application/use_cases/create_retrospective.use_case.dart';
 import 'package:metas_app/features/projects/application/use_cases/get_sprint_retrospective.use_case.dart';
 import 'package:metas_app/features/projects/application/use_cases/get_pending_sprints.use_case.dart';
+import 'package:metas_app/features/projects/application/use_cases/create_daily_entry.use_case.dart';
+import 'package:metas_app/features/projects/application/use_cases/get_user_daily_entries.use_case.dart';
+import 'package:metas_app/features/projects/application/use_cases/get_daily_entry_by_date.use_case.dart';
 import 'package:metas_app/features/projects/domain/repositories/checklist_item.repository.dart';
 import 'package:metas_app/features/projects/domain/repositories/milestone.repository.dart';
 import 'package:metas_app/features/projects/domain/repositories/project.repository.dart';
@@ -49,6 +58,7 @@ import 'package:metas_app/features/projects/domain/repositories/sprint.repositor
 import 'package:metas_app/features/projects/domain/repositories/review.repository.dart';
 import 'package:metas_app/features/projects/domain/repositories/retrospective.repository.dart';
 import 'package:metas_app/features/projects/domain/repositories/pending_sprints.repository.dart';
+import 'package:metas_app/features/projects/domain/repositories/daily_entry.repository.dart';
 import 'package:metas_app/features/projects/infrastructure/repositories_impl/checklist_item.repository_impl.dart';
 import 'package:metas_app/features/projects/infrastructure/repositories_impl/milestone.repository_impl.dart';
 import 'package:metas_app/features/projects/infrastructure/repositories_impl/project.repository_impl.dart';
@@ -58,12 +68,14 @@ import 'package:metas_app/features/projects/infrastructure/repositories_impl/spr
 import 'package:metas_app/features/projects/infrastructure/repositories_impl/review.repository_impl.dart';
 import 'package:metas_app/features/projects/infrastructure/repositories_impl/retrospective.repository_impl.dart';
 import 'package:metas_app/features/projects/infrastructure/repositories_impl/pending_sprints.repository_impl.dart';
+import 'package:metas_app/features/projects/infrastructure/repositories_impl/daily_entry.repository_impl.dart';
 import 'package:metas_app/features/projects/presentation/cubits/create_milestone.cubit.dart';
 import 'package:metas_app/features/projects/presentation/cubits/create_project.cubit.dart';
 import 'package:metas_app/features/projects/presentation/cubits/create_task.cubit.dart';
 import 'package:metas_app/features/projects/presentation/cubits/projects.cubit.dart';
 import 'package:metas_app/features/projects/presentation/cubits/rewards.cubit.dart';
 import 'package:metas_app/features/projects/presentation/cubits/pending_sprints.cubit.dart';
+import 'package:metas_app/features/projects/presentation/cubits/get_user_daily_entries.cubit.dart';
 import 'package:metas_app/features/projects/presentation/pages/main_navigation.page.dart';
 import 'package:metas_app/firebase_options.dart';
 import 'package:flutter/material.dart';
@@ -78,6 +90,20 @@ void main() async {
   runApp(MyApp());
 }
 
+/// Widget raíz de la aplicación.
+///
+/// Configura:
+/// - Firebase
+/// - Repositorios y use cases (proyectos, auth, sponsor, admin)
+/// - BlocProviders (AuthCubit, ProjectsCubit, etc.)
+/// - Router principal con redirección según rol y estado del sponsor
+///
+/// **Redirección post-login** (en [BlocConsumer<AuthCubit>]):
+/// - `admin` → [AdminSponsorsPage]
+/// - `sponsor` + `pending` → [SponsorPendingPage]
+/// - `sponsor` + `rejected`/`disabled` → [AccessDeniedPage]
+/// - `sponsor` + `approved` → [MainNavigationPage] con `isSponsor: true`
+/// - `user` → [MainNavigationPage] con `isSponsor: false`
 class MyApp extends StatelessWidget {
   MyApp({super.key});
 
@@ -93,6 +119,7 @@ class MyApp extends StatelessWidget {
   final ReviewRepository _reviewRepository = ReviewRepositoryImpl();
   final RetrospectiveRepository _retrospectiveRepository = RetrospectiveRepositoryImpl();
   final PendingSprintsRepository _pendingSprintsRepository = PendingSprintsRepositoryImpl();
+  final DailyEntryRepository _dailyEntryRepository = DailyEntryRepositoryImpl();
 
   // Use Cases
   GetUserProjectsUseCase get _getUserProjectsUseCase => GetUserProjectsUseCase(_projectRepository);
@@ -137,6 +164,20 @@ class MyApp extends StatelessWidget {
   GetSprintRetrospectiveUseCase get _getSprintRetrospectiveUseCase => GetSprintRetrospectiveUseCase(_retrospectiveRepository);
   // Pending sprints use case
   GetPendingSprintsUseCase get _getPendingSprintsUseCase => GetPendingSprintsUseCase(_pendingSprintsRepository);
+  // Daily entries use cases
+  CreateDailyEntryUseCase get _createDailyEntryUseCase => CreateDailyEntryUseCase(_dailyEntryRepository);
+  GetUserDailyEntriesUseCase get _getUserDailyEntriesUseCase => GetUserDailyEntriesUseCase(_dailyEntryRepository);
+  GetDailyEntryByDateUseCase get _getDailyEntryByDateUseCase => GetDailyEntryByDateUseCase(_dailyEntryRepository);
+  // Auth/me and sponsor
+  GetAuthMeUseCase get _getAuthMeUseCase => GetAuthMeUseCase();
+  CreateSponsorUseCase get _createSponsorUseCase => CreateSponsorUseCase();
+  // Admin
+  GetAdminPendingSponsorsUseCase get _getAdminPendingSponsorsUseCase => GetAdminPendingSponsorsUseCase();
+  GetAdminAllSponsorsUseCase get _getAdminAllSponsorsUseCase => GetAdminAllSponsorsUseCase();
+  AdminApproveSponsorUseCase get _adminApproveSponsorUseCase => AdminApproveSponsorUseCase();
+  AdminRejectSponsorUseCase get _adminRejectSponsorUseCase => AdminRejectSponsorUseCase();
+  AdminDisableSponsorUseCase get _adminDisableSponsorUseCase => AdminDisableSponsorUseCase();
+  AdminEnableSponsorUseCase get _adminEnableSponsorUseCase => AdminEnableSponsorUseCase();
 
   @override
   Widget build(BuildContext context) {
@@ -253,11 +294,49 @@ class MyApp extends StatelessWidget {
         RepositoryProvider<GetPendingSprintsUseCase>.value(
           value: _getPendingSprintsUseCase,
         ),
+        // Daily entries use cases
+        RepositoryProvider<CreateDailyEntryUseCase>.value(
+          value: _createDailyEntryUseCase,
+        ),
+        RepositoryProvider<GetUserDailyEntriesUseCase>.value(
+          value: _getUserDailyEntriesUseCase,
+        ),
+        RepositoryProvider<GetDailyEntryByDateUseCase>.value(
+          value: _getDailyEntryByDateUseCase,
+        ),
+        RepositoryProvider<GetAuthMeUseCase>.value(
+          value: _getAuthMeUseCase,
+        ),
+        RepositoryProvider<CreateSponsorUseCase>.value(
+          value: _createSponsorUseCase,
+        ),
+        RepositoryProvider<GetAdminPendingSponsorsUseCase>.value(
+          value: _getAdminPendingSponsorsUseCase,
+        ),
+        RepositoryProvider<GetAdminAllSponsorsUseCase>.value(
+          value: _getAdminAllSponsorsUseCase,
+        ),
+        RepositoryProvider<AdminApproveSponsorUseCase>.value(
+          value: _adminApproveSponsorUseCase,
+        ),
+        RepositoryProvider<AdminRejectSponsorUseCase>.value(
+          value: _adminRejectSponsorUseCase,
+        ),
+        RepositoryProvider<AdminDisableSponsorUseCase>.value(
+          value: _adminDisableSponsorUseCase,
+        ),
+        RepositoryProvider<AdminEnableSponsorUseCase>.value(
+          value: _adminEnableSponsorUseCase,
+        ),
       ],
       child: MultiBlocProvider(
         providers: [
           BlocProvider<AuthCubit>(
-            create: (context) => AuthCubit(authRepository: firebaseAuthRepository)..checkAuthStatus(),
+            create: (context) => AuthCubit(
+              authRepository: firebaseAuthRepository,
+              getAuthMeUseCase: _getAuthMeUseCase,
+              createSponsorUseCase: _createSponsorUseCase,
+            )..checkAuthStatus(),
           ),
           // Projects
           BlocProvider<ProjectsCubit>(
@@ -292,6 +371,12 @@ class MyApp extends StatelessWidget {
               getPendingSprintsUseCase: _getPendingSprintsUseCase,
             ),
           ),
+          // Daily entries
+          BlocProvider<GetUserDailyEntriesCubit>(
+            create: (context) => GetUserDailyEntriesCubit(
+              getUserDailyEntriesUseCase: _getUserDailyEntriesUseCase,
+            ),
+          ),
         ],
         child: MaterialApp(
         debugShowCheckedModeBanner: false,
@@ -299,12 +384,28 @@ class MyApp extends StatelessWidget {
         darkTheme: darkMode,
         home: BlocConsumer<AuthCubit, AuthStates>(
           builder: (context, state) {
+            // Usuario no autenticado → mostrar página de login/registro
             if (state is Unauthenticated) {
               return const AuthPage();
             }
+            // Usuario autenticado → redirigir según rol y estado del sponsor
             if (state is AuthSuccess) {
-              return const MainNavigationPage();
+              final s = state.session;
+              // Admin → Portal de administración
+              if (s.isAdmin) return const AdminSponsorsPage();
+              // Sponsor → verificar estado
+              if (s.isSponsor) {
+                // PENDING → Pantalla de espera
+                if (s.isSponsorPending) return const SponsorPendingPage();
+                // REJECTED o DISABLED → Acceso denegado
+                if (s.isSponsorRejectedOrDisabled) return const AccessDeniedPage();
+                // APPROVED → Portal sponsor (sin sprints/dailies/reviews/retro)
+                return const MainNavigationPage(isSponsor: true);
+              }
+              // User normal → Portal usuario (con todas las funcionalidades)
+              return const MainNavigationPage(isSponsor: false);
             }
+            // Usuario autenticado con Google pero necesita completar registro
             if (state is GoogleAuthPendingRegistration) {
               return RegisterPage(
                 togglePages: () {},
@@ -312,6 +413,7 @@ class MyApp extends StatelessWidget {
                 isGoogleRegistration: true,
               );
             }
+            // Estado de carga inicial
             return LoadingWidget();
           },
           listener: (context, state) {

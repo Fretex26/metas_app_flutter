@@ -14,20 +14,17 @@ import 'package:metas_app/features/projects/presentation/pages/edit_project.page
 import 'package:metas_app/features/projects/presentation/pages/milestone_detail.page.dart';
 
 /// Página que muestra el detalle completo de un proyecto.
-/// 
-/// Muestra:
-/// - Información del proyecto (nombre, descripción, estado, progreso)
-/// - Lista de milestones con sus tarjetas
-/// - Pull-to-refresh para actualizar
-/// - FAB para crear nuevo milestone
-/// - Botones de editar y eliminar en el AppBar
-/// - Navegación al detalle de cada milestone
+///
+/// [isSponsor] true en portal sponsor (milestones sin sprints).
 class ProjectDetailPage extends StatelessWidget {
-  /// Identificador único del proyecto a mostrar
   final String projectId;
+  final bool isSponsor;
 
-  /// Constructor de la página de detalle de proyecto
-  const ProjectDetailPage({super.key, required this.projectId});
+  const ProjectDetailPage({
+    super.key,
+    required this.projectId,
+    this.isSponsor = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -99,6 +96,7 @@ class ProjectDetailPage extends StatelessWidget {
                   milestones: state.milestones,
                   projectId: projectId,
                   scaffoldContext: scaffoldContext,
+                  isSponsor: isSponsor,
                 ),
               );
             }
@@ -124,6 +122,7 @@ class _ProjectDetailContent extends StatelessWidget {
   final List<dynamic> milestones;
   final String projectId;
   final BuildContext scaffoldContext;
+  final bool isSponsor;
 
   const _ProjectDetailContent({
     required this.project,
@@ -131,6 +130,7 @@ class _ProjectDetailContent extends StatelessWidget {
     required this.milestones,
     required this.projectId,
     required this.scaffoldContext,
+    this.isSponsor = false,
   });
 
   Future<void> _handleEdit(BuildContext context) async {
@@ -320,6 +320,7 @@ class _ProjectDetailContent extends StatelessWidget {
                             builder: (context) => MilestoneDetailPage(
                               projectId: projectId,
                               milestoneId: milestone.id,
+                              isSponsor: isSponsor,
                             ),
                           ),
                         ).then((_) {

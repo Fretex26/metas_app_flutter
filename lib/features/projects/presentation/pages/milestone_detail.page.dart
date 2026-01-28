@@ -24,25 +24,18 @@ import 'package:metas_app/features/projects/presentation/pages/sprint_detail.pag
 import 'package:metas_app/features/projects/presentation/pages/task_detail.page.dart';
 
 /// Página que muestra el detalle completo de un milestone.
-/// 
-/// Muestra:
-/// - Información del milestone (nombre, descripción, estado, progreso)
-/// - Lista de tasks con sus tarjetas
-/// - Pull-to-refresh para actualizar
-/// - FAB para crear nueva task
-/// - Navegación al detalle de cada task
+///
+/// [isSponsor] true en portal sponsor: se oculta la sección de sprints (crear, listar, abrir).
 class MilestoneDetailPage extends StatelessWidget {
-  /// Identificador único del proyecto (para navegación)
   final String projectId;
-
-  /// Identificador único del milestone a mostrar
   final String milestoneId;
+  final bool isSponsor;
 
-  /// Constructor de la página de detalle de milestone
   const MilestoneDetailPage({
     super.key,
     required this.projectId,
     required this.milestoneId,
+    this.isSponsor = false,
   });
 
   @override
@@ -117,6 +110,7 @@ class MilestoneDetailPage extends StatelessWidget {
                   projectId: projectId,
                   milestoneId: milestoneId,
                   pageContext: pageContext,
+                  isSponsor: isSponsor,
                 ),
               );
             }
@@ -144,6 +138,7 @@ class _MilestoneDetailContent extends StatelessWidget {
   final String projectId;
   final String milestoneId;
   final BuildContext pageContext;
+  final bool isSponsor;
 
   const _MilestoneDetailContent({
     required this.milestone,
@@ -153,6 +148,7 @@ class _MilestoneDetailContent extends StatelessWidget {
     required this.projectId,
     required this.milestoneId,
     required this.pageContext,
+    this.isSponsor = false,
   });
 
   Future<void> _handleEdit(BuildContext context) async {
@@ -287,116 +283,117 @@ class _MilestoneDetailContent extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Sprints',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Theme.of(context).colorScheme.primary,
+                if (!isSponsor) ...[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Sprints',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.add),
-                      onPressed: () async {
-                        final result = await Navigator.push(
-                          pageContext,
-                          MaterialPageRoute(
-                            builder: (context) => BlocProvider(
-                              create: (context) => CreateSprintCubit(
-                                createSprintUseCase: context.read(),
+                      IconButton(
+                        icon: const Icon(Icons.add),
+                        onPressed: () async {
+                          final result = await Navigator.push(
+                            pageContext,
+                            MaterialPageRoute(
+                              builder: (context) => BlocProvider(
+                                create: (context) => CreateSprintCubit(
+                                  createSprintUseCase: context.read(),
+                                ),
+                                child: CreateSprintPage(milestoneId: milestoneId),
                               ),
-                              child: CreateSprintPage(milestoneId: milestoneId),
+                            ),
+                          );
+                          if (result != null && pageContext.mounted) {
+                            pageContext.read<MilestoneDetailCubit>().loadMilestone(projectId, milestoneId);
+                          }
+                        },
+                        tooltip: 'Crear Sprint',
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  FutureBuilder(
+                    future: context.read<GetMilestoneSprintsUseCase>()(milestoneId),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(16),
+                            child: CircularProgressIndicator(),
+                          ),
+                        );
+                      }
+                      if (snapshot.hasError) {
+                        return Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Text(
+                              'Error al cargar sprints: ${snapshot.error}',
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.error,
+                              ),
                             ),
                           ),
                         );
-                        if (result != null && pageContext.mounted) {
-                          pageContext.read<MilestoneDetailCubit>().loadMilestone(projectId, milestoneId);
-                        }
-                      },
-                      tooltip: 'Crear Sprint',
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                FutureBuilder(
-                  future: context.read<GetMilestoneSprintsUseCase>()(milestoneId),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(16),
-                          child: CircularProgressIndicator(),
-                        ),
-                      );
-                    }
-                    if (snapshot.hasError) {
-                      return Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Text(
-                            'Error al cargar sprints: ${snapshot.error}',
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.error,
+                      }
+                      final sprints = snapshot.data ?? [];
+                      if (sprints.isEmpty) {
+                        return Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(32),
+                            child: Column(
+                              children: [
+                                Icon(
+                                  Icons.timeline_outlined,
+                                  size: 48,
+                                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'No hay sprints aún',
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ),
-                      );
-                    }
-                    final sprints = snapshot.data ?? [];
-                    if (sprints.isEmpty) {
-                      return Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(32),
-                          child: Column(
-                            children: [
-                              Icon(
-                                Icons.timeline_outlined,
-                                size: 48,
-                                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                'No hay sprints aún',
-                                style: TextStyle(
-                                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }
-                    return Column(
-                      children: sprints.map((sprint) {
-                        // Contar tasks del sprint
-                        final sprintTasks = tasks.where((t) => t.sprintId == sprint.id).toList();
-                        return SprintCard(
-                          sprint: sprint,
-                          taskCount: sprintTasks.length,
-                          onTap: () async {
-                            final result = await Navigator.push(
-                              pageContext,
-                              MaterialPageRoute(
-                                builder: (context) => SprintDetailPage(
-                                  projectId: projectId,
-                                  milestoneId: milestoneId,
-                                  sprintId: sprint.id,
-                                ),
-                              ),
-                            );
-                            if (result != null && pageContext.mounted) {
-                              pageContext.read<MilestoneDetailCubit>().loadMilestone(projectId, milestoneId);
-                            }
-                          },
                         );
-                      }).toList(),
-                    );
-                  },
-                ),
-                const SizedBox(height: 24),
+                      }
+                      return Column(
+                        children: sprints.map((sprint) {
+                          final sprintTasks = tasks.where((t) => t.sprintId == sprint.id).toList();
+                          return SprintCard(
+                            sprint: sprint,
+                            taskCount: sprintTasks.length,
+                            onTap: () async {
+                              final result = await Navigator.push(
+                                pageContext,
+                                MaterialPageRoute(
+                                  builder: (context) => SprintDetailPage(
+                                    projectId: projectId,
+                                    milestoneId: milestoneId,
+                                    sprintId: sprint.id,
+                                  ),
+                                ),
+                              );
+                              if (result != null && pageContext.mounted) {
+                                pageContext.read<MilestoneDetailCubit>().loadMilestone(projectId, milestoneId);
+                              }
+                            },
+                          );
+                        }).toList(),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 24),
+                ],
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [

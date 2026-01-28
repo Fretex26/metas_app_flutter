@@ -223,113 +223,124 @@ class PendingSprintsDialog extends StatelessWidget {
   }
 
   void _handleSprintTap(BuildContext context, PendingSprint sprint) {
-    Navigator.of(context).pop(); // Cerrar el diálogo primero
-
     if (sprint.needsBoth) {
-      // Si necesita ambas, mostrar diálogo para elegir
+      // Si necesita ambas, mostrar diálogo para elegir (no cerrar el diálogo principal aún)
       _showActionDialog(context, sprint);
-    } else if (sprint.needsReview) {
-      // Navegar directamente a crear review
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => BlocProvider(
-            create: (context) => CreateReviewCubit(
-              createReviewUseCase: context.read<CreateReviewUseCase>(),
-            ),
-            child: CreateReviewPage(sprintId: sprint.sprintId),
-          ),
-        ),
-      );
-    } else if (sprint.needsRetrospective) {
-      // Navegar directamente a crear retrospectiva
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => BlocProvider(
-            create: (context) => CreateRetrospectiveCubit(
-              createRetrospectiveUseCase: context.read<CreateRetrospectiveUseCase>(),
-            ),
-            child: CreateRetrospectivePage(sprintId: sprint.sprintId),
-          ),
-        ),
-      );
     } else {
-      // Si ya tiene ambas (caso raro), navegar al detalle
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => SprintDetailPage(
-            projectId: sprint.projectId,
-            milestoneId: sprint.milestoneId,
-            sprintId: sprint.sprintId,
+      // Para los demás casos, cerrar el diálogo primero y luego navegar
+      Navigator.of(context).pop();
+      
+      if (sprint.needsReview) {
+        // Navegar directamente a crear review
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => BlocProvider(
+              create: (context) => CreateReviewCubit(
+                createReviewUseCase: context.read<CreateReviewUseCase>(),
+              ),
+              child: CreateReviewPage(sprintId: sprint.sprintId),
+            ),
           ),
-        ),
-      );
+        );
+      } else if (sprint.needsRetrospective) {
+        // Navegar directamente a crear retrospectiva
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => BlocProvider(
+              create: (context) => CreateRetrospectiveCubit(
+                createRetrospectiveUseCase: context.read<CreateRetrospectiveUseCase>(),
+              ),
+              child: CreateRetrospectivePage(sprintId: sprint.sprintId),
+            ),
+          ),
+        );
+      } else {
+        // Si ya tiene ambas (caso raro), navegar al detalle
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => SprintDetailPage(
+              projectId: sprint.projectId,
+              milestoneId: sprint.milestoneId,
+              sprintId: sprint.sprintId,
+            ),
+          ),
+        );
+      }
     }
   }
 
   void _showActionDialog(BuildContext context, PendingSprint sprint) {
+    // Guardar referencias a los use cases y obtener el root navigator antes de cerrar el diálogo
+    final createReviewUseCase = context.read<CreateReviewUseCase>();
+    final createRetrospectiveUseCase = context.read<CreateRetrospectiveUseCase>();
+    final rootNavigator = Navigator.of(context, rootNavigator: true);
+    
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(sprint.sprintName),
-        content: const Text(
-          'Este sprint necesita tanto review como retrospectiva. ¿Qué deseas crear primero?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(dialogContext).pop();
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => BlocProvider(
-                    create: (context) => CreateReviewCubit(
-                      createReviewUseCase: context.read<CreateReviewUseCase>(),
+      builder: (dialogContext) {
+        // Función auxiliar para cerrar ambos diálogos y navegar
+        void navigateAndClose(Widget page) {
+          Navigator.of(dialogContext).pop(); // Cerrar diálogo de acción
+          Navigator.of(context).pop(); // Cerrar diálogo principal
+          // Usar Future.microtask para asegurar que la navegación ocurra después del cierre
+          // y usar el root navigator que siempre está disponible
+          Future.microtask(() {
+            rootNavigator.push(
+              MaterialPageRoute(builder: (_) => page),
+            );
+          });
+        }
+        
+        return AlertDialog(
+          title: Text(sprint.sprintName),
+          content: const Text(
+            'Este sprint necesita tanto review como retrospectiva. ¿Qué deseas crear primero?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                navigateAndClose(
+                  BlocProvider(
+                    create: (_) => CreateReviewCubit(
+                      createReviewUseCase: createReviewUseCase,
                     ),
                     child: CreateReviewPage(sprintId: sprint.sprintId),
                   ),
-                ),
-              );
-            },
-            child: const Text('Review'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(dialogContext).pop();
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => BlocProvider(
-                    create: (context) => CreateRetrospectiveCubit(
-                      createRetrospectiveUseCase: context.read<CreateRetrospectiveUseCase>(),
+                );
+              },
+              child: const Text('Review'),
+            ),
+            TextButton(
+              onPressed: () {
+                navigateAndClose(
+                  BlocProvider(
+                    create: (_) => CreateRetrospectiveCubit(
+                      createRetrospectiveUseCase: createRetrospectiveUseCase,
                     ),
                     child: CreateRetrospectivePage(sprintId: sprint.sprintId),
                   ),
-                ),
-              );
-            },
-            child: const Text('Retrospectiva'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.of(dialogContext).pop();
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => SprintDetailPage(
+                );
+              },
+              child: const Text('Retrospectiva'),
+            ),
+            TextButton(
+              onPressed: () {
+                navigateAndClose(
+                  SprintDetailPage(
                     projectId: sprint.projectId,
                     milestoneId: sprint.milestoneId,
                     sprintId: sprint.sprintId,
                   ),
-                ),
-              );
-            },
-            child: const Text('Ver Detalle'),
-          ),
-        ],
-      ),
+                );
+              },
+              child: const Text('Ver Detalle'),
+            ),
+          ],
+        );
+      },
     );
   }
 }

@@ -8,13 +8,12 @@ import 'package:metas_app/features/projects/presentation/pages/rewards_list.page
 
 /// Página principal con navegación inferior que permite cambiar entre
 /// la lista de proyectos y la lista de rewards.
-/// 
-/// Incluye un BottomNavigationBar con dos opciones:
-/// - Proyectos: Muestra la lista de proyectos del usuario
-/// - Recompensas: Muestra la lista de rewards del usuario
+///
+/// [isSponsor] true para portal sponsor (sin sprints pendientes, sin dailies/reviews/retro).
 class MainNavigationPage extends StatefulWidget {
-  /// Constructor de la página de navegación principal
-  const MainNavigationPage({super.key});
+  final bool isSponsor;
+
+  const MainNavigationPage({super.key, this.isSponsor = false});
 
   @override
   State<MainNavigationPage> createState() => _MainNavigationPageState();
@@ -24,10 +23,10 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
   int _currentIndex = 0;
   bool _hasCheckedPendingSprints = false;
 
-  final List<Widget> _pages = [
-    const ProjectsListPage(),
-    const RewardsListPage(),
-  ];
+  List<Widget> _buildPages() => [
+        ProjectsListPage(isSponsor: widget.isSponsor),
+        const RewardsListPage(),
+      ];
 
   @override
   void initState() {
@@ -39,6 +38,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
   }
 
   void _checkPendingSprints() {
+    if (widget.isSponsor) return;
     if (!_hasCheckedPendingSprints && mounted) {
       _hasCheckedPendingSprints = true;
       context.read<PendingSprintsCubit>().loadPendingSprints();
@@ -70,7 +70,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
       child: Scaffold(
         body: IndexedStack(
           index: _currentIndex,
-          children: _pages,
+          children: _buildPages(),
         ),
         bottomNavigationBar: BottomNavigationBar(
           currentIndex: _currentIndex,

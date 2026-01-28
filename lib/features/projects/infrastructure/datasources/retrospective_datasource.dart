@@ -95,12 +95,13 @@ class RetrospectiveDatasource {
   /// [sprintId] - Identificador único del sprint (UUID)
   /// 
   /// Retorna la retrospectiva si existe y el usuario tiene permisos.
+  /// Retorna null si no existe retrospectiva para este sprint (404).
   /// Si es pública, cualquiera puede verla. Si es privada, solo el dueño puede verla.
   /// 
   /// Lanza una excepción si:
-  /// - El sprint no existe o no existe retrospectiva para este sprint (404)
   /// - El usuario no tiene permisos (403) - solo aplica si es privada y no eres el dueño
   /// - El usuario no está autenticado (401)
+  /// - Error de conexión o del servidor
   Future<RetrospectiveResponseDto?> getSprintRetrospective(String sprintId) async {
     try {
       final token = await _getAuthToken();
@@ -111,11 +112,33 @@ class RetrospectiveDatasource {
             'Authorization': 'Bearer $token',
             'Content-Type': 'application/json',
           },
+          // Configurar validateStatus para que 404 no lance excepción
+          // validateStatus retorna true para códigos que NO deben lanzar excepción
+          validateStatus: (status) {
+            return status != null && status < 500;
+          },
         ),
       );
 
+      // Si la respuesta es 404, retornar null (no hay retrospectiva)
+      if (response.statusCode == 404) {
+        return null;
+      }
+
+      // Si hay otro código de error (401, 403, etc.), lanzar excepción
+      if (response.statusCode != null && response.statusCode! >= 400) {
+        if (response.statusCode == 401) {
+          throw Exception('No autorizado. Por favor, inicia sesión nuevamente.');
+        }
+        if (response.statusCode == 403) {
+          throw Exception('No tienes permiso para acceder a esta retrospectiva');
+        }
+        throw Exception('Error al obtener retrospectiva: ${response.statusCode}');
+      }
+
       return RetrospectiveResponseDto.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
+      // Manejar errores de Dio que no fueron capturados por validateStatus
       if (e.response?.statusCode == 401) {
         throw Exception('No autorizado. Por favor, inicia sesión nuevamente.');
       }
@@ -126,8 +149,16 @@ class RetrospectiveDatasource {
       if (e.response?.statusCode == 403) {
         throw Exception('No tienes permiso para acceder a esta retrospectiva');
       }
+      if (e.type == DioExceptionType.connectionTimeout ||
+          e.type == DioExceptionType.receiveTimeout) {
+        throw Exception('Error de conexión. Verifica tu internet.');
+      }
       rethrow;
     } catch (e) {
+      // Si ya es una Exception, relanzarla
+      if (e is Exception) {
+        rethrow;
+      }
       throw Exception('Error al obtener retrospectiva: $e');
     }
   }

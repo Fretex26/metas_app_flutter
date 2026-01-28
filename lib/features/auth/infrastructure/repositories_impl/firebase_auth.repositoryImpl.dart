@@ -129,16 +129,39 @@ class FirebaseAuthRepositoryImpl extends AuthRepository {
                 role: role,
               );
             } catch (retryError) {
-              // Si aún falla, loguear pero no fallar el registro en Firebase
-              // El usuario quedará registrado en Firebase pero no en la API
-              print('Advertencia: No se pudo registrar el usuario en la API después del reintento: $retryError');
+              // Si aún falla después del reintento, eliminar el usuario de Firebase
+              // para evitar estado inconsistente (usuario en Firebase pero no en BD)
+              try {
+                await user.delete();
+              } catch (_) {
+                // Ignorar errores al eliminar
+              }
+              // Re-lanzar la excepción para que el cubit la maneje
+              throw Exception(
+                'No se pudo registrar el usuario en el sistema. '
+                'Por favor, intenta nuevamente. Si el problema persiste, contacta al soporte.',
+              );
             }
+          } else {
+            // No se pudo obtener token refrescado, eliminar usuario de Firebase
+            try {
+              await user.delete();
+            } catch (_) {
+              // Ignorar errores al eliminar
+            }
+            throw Exception('No se pudo obtener un token válido. Por favor, intenta nuevamente.');
           }
         } else {
-          // Otros errores de la API
-          // El usuario quedará registrado en Firebase pero no en la API
-          // Esto permite que el flujo continúe, pero debería manejarse según la lógica de negocio
-          print('Advertencia: No se pudo registrar el usuario en la API: ${e.message}');
+          // Otros errores de la API: eliminar usuario de Firebase para evitar estado inconsistente
+          try {
+            await user.delete();
+          } catch (_) {
+            // Ignorar errores al eliminar
+          }
+          // Re-lanzar la excepción con mensaje amigable
+          final errorMessage = e.response?.data?['message']?.toString() ?? 
+              'No se pudo completar el registro. Por favor, intenta nuevamente.';
+          throw Exception(errorMessage);
         }
       }
 
@@ -283,13 +306,38 @@ class FirebaseAuthRepositoryImpl extends AuthRepository {
                 role: role,
               );
             } catch (retryError) {
-              // Si aún falla, loguear pero no fallar el registro en Firebase
-              print('Advertencia: No se pudo registrar el usuario en la API después del reintento: $retryError');
+              // Si aún falla después del reintento, eliminar el usuario de Firebase
+              try {
+                await updatedUser.delete();
+              } catch (_) {
+                // Ignorar errores al eliminar
+              }
+              // Re-lanzar la excepción para que el cubit la maneje
+              throw Exception(
+                'No se pudo registrar el usuario en el sistema. '
+                'Por favor, intenta nuevamente. Si el problema persiste, contacta al soporte.',
+              );
             }
+          } else {
+            // No se pudo obtener token refrescado, eliminar usuario de Firebase
+            try {
+              await updatedUser.delete();
+            } catch (_) {
+              // Ignorar errores al eliminar
+            }
+            throw Exception('No se pudo obtener un token válido. Por favor, intenta nuevamente.');
           }
         } else {
-          // Otros errores de la API
-          print('Advertencia: No se pudo registrar el usuario en la API: ${e.message}');
+          // Otros errores de la API: eliminar usuario de Firebase para evitar estado inconsistente
+          try {
+            await updatedUser.delete();
+          } catch (_) {
+            // Ignorar errores al eliminar
+          }
+          // Re-lanzar la excepción con mensaje amigable
+          final errorMessage = e.response?.data?['message']?.toString() ?? 
+              'No se pudo completar el registro. Por favor, intenta nuevamente.';
+          throw Exception(errorMessage);
         }
       }
       

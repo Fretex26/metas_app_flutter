@@ -37,18 +37,19 @@ class PendingSprintsDatasource {
 
   /// Obtiene todos los sprints pendientes de review o retrospectiva.
   /// 
-  /// Endpoint: GET /reviews/pending-sprints
+  /// Endpoint: GET /api/reviews/pending-sprints
   /// 
   /// Retorna una lista de sprints que han finalizado y que necesitan review o retrospectiva.
   /// 
   /// Lanza una excepción si:
   /// - El usuario no está autenticado (401)
+  /// - La ruta no existe en el servidor (404)
   /// - Error del servidor (500)
   Future<List<PendingSprintResponseDto>> getPendingSprints() async {
     try {
       final token = await _getAuthToken();
       final response = await _dio.get(
-        '${ApiConfig.baseUrl}/reviews/pending-sprints',
+        '${ApiConfig.baseUrl}/api/reviews/pending-sprints',
         options: Options(
           headers: {
             'Authorization': 'Bearer $token',
@@ -64,6 +65,9 @@ class PendingSprintsDatasource {
     } on DioException catch (e) {
       if (e.response?.statusCode == 401) {
         throw Exception('No autorizado. Por favor, inicia sesión nuevamente.');
+      }
+      if (e.response?.statusCode == 404) {
+        throw Exception('La ruta no está disponible en el servidor. Por favor, verifica que el endpoint esté implementado.');
       }
       if (e.response?.statusCode == 500) {
         throw Exception('Error del servidor. Por favor, intenta más tarde.');

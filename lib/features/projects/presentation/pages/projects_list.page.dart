@@ -8,15 +8,12 @@ import 'package:metas_app/features/projects/presentation/pages/create_project.pa
 import 'package:metas_app/features/projects/presentation/pages/project_detail.page.dart';
 
 /// Página principal que muestra la lista de proyectos del usuario.
-/// 
-/// Esta es la home page de la aplicación después del login. Muestra:
-/// - Lista de proyectos con sus tarjetas
-/// - Progreso de cada proyecto
-/// - Pull-to-refresh para actualizar
-/// - FAB para crear nuevo proyecto
-/// - Navegación al detalle de cada proyecto
+///
+/// [isSponsor] true en portal sponsor (oculta sprints/dailies/reviews/retro en detalle).
 class ProjectsListPage extends StatefulWidget {
-  const ProjectsListPage({super.key});
+  final bool isSponsor;
+
+  const ProjectsListPage({super.key, this.isSponsor = false});
 
   @override
   State<ProjectsListPage> createState() => _ProjectsListPageState();
@@ -124,14 +121,17 @@ class _ProjectsListPageState extends State<ProjectsListPage> {
                 itemBuilder: (context, index) {
                   final project = state.projects[index];
                   final progress = state.progressMap[project.id];
-                  return ProjectCard(
+                    return ProjectCard(
                     project: project,
                     progress: progress,
                     onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => ProjectDetailPage(projectId: project.id),
+                          builder: (context) => ProjectDetailPage(
+                            projectId: project.id,
+                            isSponsor: widget.isSponsor,
+                          ),
                         ),
                       ).then((_) {
                         context.read<ProjectsCubit>().loadProjects();

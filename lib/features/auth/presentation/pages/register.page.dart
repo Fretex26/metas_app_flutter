@@ -3,8 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:metas_app/features/auth/presentation/components/my_button.dart';
 import 'package:metas_app/features/auth/presentation/components/my_role_dropdown.dart';
 import 'package:metas_app/features/auth/presentation/components/my_textfield.dart';
+import 'package:metas_app/features/auth/presentation/components/my_textfield_multiline.dart';
 import 'package:metas_app/features/auth/presentation/cubits/auth.cubit.dart';
 import 'package:metas_app/features/auth/presentation/cubits/auth.states.dart';
+import 'package:metas_app/features/sponsor/infrastructure/dto/create_sponsor.dto.dart';
 
 class RegisterPage extends StatefulWidget {
   final Function() togglePages;
@@ -27,63 +29,109 @@ class _RegisterPageState extends State<RegisterPage> {
   final passwordController = TextEditingController();
   final passwordConfirmationController = TextEditingController();
   final nameController = TextEditingController();
-  String? selectedRole; // 'user' o 'sponsor'
-  
+  final businessNameController = TextEditingController();
+  final descriptionController = TextEditingController();
+  final categoryController = TextEditingController();
+  final contactEmailController = TextEditingController();
+  String? selectedRole;
+
   @override
   void initState() {
     super.initState();
-    // Pre-llenar el email si viene de Google
     if (widget.googleEmail != null) {
       emailController.text = widget.googleEmail!;
+      contactEmailController.text = widget.googleEmail!;
     }
   }
 
+  bool _validateSponsorFields() {
+    if (businessNameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Nombre del negocio es requerido')),
+      );
+      return false;
+    }
+    if (descriptionController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Descripción del negocio es requerida')),
+      );
+      return false;
+    }
+    if (categoryController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Categoría es requerida')),
+      );
+      return false;
+    }
+    if (contactEmailController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Email de contacto es requerido')),
+      );
+      return false;
+    }
+    return true;
+  }
+
+  CreateSponsorDto? _buildSponsorDto() {
+    if (selectedRole != 'sponsor') return null;
+    return CreateSponsorDto(
+      businessName: businessNameController.text.trim(),
+      description: descriptionController.text.trim(),
+      category: categoryController.text.trim(),
+      contactEmail: contactEmailController.text.trim(),
+    );
+  }
+
   Future<void> signUp() async {
+    final authCubit = context.read<AuthCubit>();
     if (widget.isGoogleRegistration) {
-      // Modo completar registro de Google - requiere nombre y rol
       if (nameController.text.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('El nombre es requerido')),
+          const SnackBar(content: Text('El nombre es requerido')),
         );
         return;
       }
       if (selectedRole == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Debes seleccionar un propósito')),
+          const SnackBar(content: Text('Debes seleccionar un propósito')),
         );
         return;
       }
-      final authCubit = context.read<AuthCubit>();
-      await authCubit.completeGoogleRegistration(nameController.text, selectedRole!);
+      if (selectedRole == 'sponsor' && !_validateSponsorFields()) return;
+      await authCubit.completeGoogleRegistration(
+        nameController.text,
+        selectedRole!,
+        sponsorData: _buildSponsorDto(),
+      );
     } else {
-      // Modo registro normal - requiere todos los campos
       if (nameController.text.isEmpty ||
           emailController.text.isEmpty ||
           passwordController.text.isEmpty ||
           passwordConfirmationController.text.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Todos los campos son requeridos')),
+          const SnackBar(content: Text('Todos los campos son requeridos')),
         );
         return;
       }
       if (selectedRole == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Debes seleccionar un propósito')),
+          const SnackBar(content: Text('Debes seleccionar un propósito')),
         );
         return;
       }
       if (passwordController.text != passwordConfirmationController.text) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Las contraseñas no coinciden')),
+          const SnackBar(content: Text('Las contraseñas no coinciden')),
         );
         return;
       }
-      final authCubit = context.read<AuthCubit>();
+      if (selectedRole == 'sponsor' && !_validateSponsorFields()) return;
       await authCubit.signUp(
         nameController.text,
         emailController.text,
         passwordController.text,
         selectedRole!,
+        sponsorData: _buildSponsorDto(),
       );
     }
   }
@@ -94,6 +142,10 @@ class _RegisterPageState extends State<RegisterPage> {
     emailController.dispose();
     passwordController.dispose();
     passwordConfirmationController.dispose();
+    businessNameController.dispose();
+    descriptionController.dispose();
+    categoryController.dispose();
+    contactEmailController.dispose();
     super.dispose();
   }
 
@@ -112,19 +164,20 @@ class _RegisterPageState extends State<RegisterPage> {
         }
       },
       child: Scaffold(
-        body: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 25.0),
-          child: Center(
+        body: SafeArea(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 20.0),
             child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
               Icon(
                 Icons.lock_open,
-                size: 100,
+                size: selectedRole == 'sponsor' ? 70 : 100,
                 color: Theme.of(context).colorScheme.primary,
               ),
 
-              SizedBox(height: 25),
+              SizedBox(height: selectedRole == 'sponsor' ? 16 : 20),
 
               Text(
                 widget.isGoogleRegistration 
@@ -137,7 +190,7 @@ class _RegisterPageState extends State<RegisterPage> {
                 ),
               ),
 
-              SizedBox(height: 25),
+              SizedBox(height: 20),
 
               MyTextField(
                 controller: nameController,
@@ -183,14 +236,50 @@ class _RegisterPageState extends State<RegisterPage> {
                 },
               ),
 
-              SizedBox(height: 25),
+              if (selectedRole == 'sponsor') ...[
+                SizedBox(height: 12),
+                Text(
+                  'Datos del negocio (patrocinador)',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+                SizedBox(height: 6),
+                MyTextField(
+                  controller: businessNameController,
+                  hintText: 'Nombre del negocio',
+                  obscureText: false,
+                ),
+                SizedBox(height: 10),
+                MyTextFieldMultiline(
+                  controller: descriptionController,
+                  hintText: 'Descripción del negocio',
+                ),
+                SizedBox(height: 10),
+                MyTextField(
+                  controller: categoryController,
+                  hintText: 'Categoría',
+                  obscureText: false,
+                ),
+                SizedBox(height: 10),
+                MyTextField(
+                  controller: contactEmailController,
+                  hintText: 'Email de contacto',
+                  obscureText: false,
+                ),
+                SizedBox(height: 12),
+              ],
+
+              SizedBox(height: 20),
 
               MyButton(
                 onTap: signUp, 
                 text: widget.isGoogleRegistration ? "COMPLETAR REGISTRO" : "CREAR CUENTA"
               ),
 
-              SizedBox(height: 25),
+              SizedBox(height: 20),
 
               if (!widget.isGoogleRegistration)
                 Row(
@@ -212,10 +301,10 @@ class _RegisterPageState extends State<RegisterPage> {
                     )),
                   ],
                 ),
-            ],
+              ],
+            ),
           ),
         ),
-      ),
       ),
     );
   }

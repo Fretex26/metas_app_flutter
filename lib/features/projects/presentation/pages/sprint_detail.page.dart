@@ -28,6 +28,11 @@ import 'package:metas_app/features/projects/presentation/cubits/get_sprint_retro
 import 'package:metas_app/features/projects/presentation/cubits/get_sprint_retrospective.states.dart';
 import 'package:metas_app/features/projects/presentation/cubits/create_review.cubit.dart';
 import 'package:metas_app/features/projects/presentation/cubits/create_retrospective.cubit.dart';
+import 'package:metas_app/features/projects/presentation/cubits/get_daily_entry_by_date.cubit.dart';
+import 'package:metas_app/features/projects/presentation/cubits/get_daily_entry_by_date.states.dart';
+import 'package:metas_app/features/projects/presentation/cubits/create_daily_entry.cubit.dart';
+import 'package:metas_app/features/projects/presentation/pages/create_daily_entry.page.dart';
+import 'package:metas_app/features/projects/presentation/pages/daily_entries_list.page.dart';
 
 /// Página que muestra el detalle completo de un sprint.
 /// 
@@ -124,6 +129,11 @@ class SprintDetailPage extends StatelessWidget {
                       getSprintRetrospectiveUseCase: context.read(),
                     )..loadRetrospective(sprintId),
                   ),
+                  BlocProvider(
+                    create: (context) => GetDailyEntryByDateCubit(
+                      getDailyEntryByDateUseCase: context.read(),
+                    )..loadDailyEntryByDate(DateTime.now()),
+                  ),
                 ],
                 child: _SprintDetailContent(
                   sprint: state.sprint,
@@ -151,7 +161,7 @@ class SprintDetailPage extends StatelessWidget {
 
 /// Widget interno que muestra el contenido del detalle del sprint
 /// con funcionalidad de edición y eliminación.
-class _SprintDetailContent extends StatelessWidget {
+class _SprintDetailContent extends StatefulWidget {
   final dynamic sprint;
   final List<dynamic> tasks;
   final String projectId;
@@ -168,6 +178,27 @@ class _SprintDetailContent extends StatelessWidget {
     required this.pageContext,
   });
 
+  @override
+  State<_SprintDetailContent> createState() => _SprintDetailContentState();
+}
+
+class _SprintDetailContentState extends State<_SprintDetailContent> {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Refrescar la entrada diaria cuando la página se vuelve a mostrar
+    // Solo refrescar si no está en estado de carga para evitar refrescos innecesarios
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        final state = context.read<GetDailyEntryByDateCubit>().state;
+        // Solo refrescar si no está cargando y no es un estado de error reciente
+        if (state is! GetDailyEntryByDateLoading) {
+          context.read<GetDailyEntryByDateCubit>().refresh(DateTime.now());
+        }
+      }
+    });
+  }
+
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
   }
@@ -181,15 +212,15 @@ class _SprintDetailContent extends StatelessWidget {
             updateSprintUseCase: context.read(),
           ),
           child: EditSprintPage(
-            milestoneId: milestoneId,
-            sprint: sprint,
+            milestoneId: widget.milestoneId,
+            sprint: widget.sprint,
           ),
         ),
       ),
     );
 
-    if (result != null && pageContext.mounted) {
-      pageContext.read<SprintDetailCubit>().refresh(milestoneId, sprintId);
+    if (result != null && widget.pageContext.mounted) {
+      widget.pageContext.read<SprintDetailCubit>().refresh(widget.milestoneId, widget.sprintId);
     }
   }
 
@@ -206,22 +237,22 @@ class _SprintDetailContent extends StatelessWidget {
 
     if (!confirmed) return;
 
-    context.read<DeleteSprintCubit>().deleteSprint(milestoneId, sprintId);
+    context.read<DeleteSprintCubit>().deleteSprint(widget.milestoneId, widget.sprintId);
   }
 
   bool _isSprintFinished() {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
-    final endDate = DateTime(sprint.endDate.year, sprint.endDate.month, sprint.endDate.day);
+    final endDate = DateTime(widget.sprint.endDate.year, widget.sprint.endDate.month, widget.sprint.endDate.day);
     // El sprint está finalizado si la fecha de fin es anterior o igual a hoy
     return endDate.isBefore(today) || endDate == today;
   }
-
+  
   @override
   Widget build(BuildContext context) {
-    final duration = sprint.durationInDays;
-    final completedTasks = tasks.where((t) => t.status == 'completed').length;
-    final totalTasks = tasks.length;
+    final duration = widget.sprint.durationInDays;
+    final completedTasks = widget.tasks.where((t) => t.status == 'completed').length;
+    final totalTasks = widget.tasks.length;
     final isFinished = _isSprintFinished();
 
     return BlocListener<DeleteSprintCubit, DeleteSprintState>(
@@ -264,7 +295,9 @@ class _SprintDetailContent extends StatelessWidget {
         ),
         body: RefreshIndicator(
           onRefresh: () async {
-            pageContext.read<SprintDetailCubit>().refresh(milestoneId, sprintId);
+            widget.pageContext.read<SprintDetailCubit>().refresh(widget.milestoneId, widget.sprintId);
+            // También refrescar la entrada diaria
+            context.read<GetDailyEntryByDateCubit>().refresh(DateTime.now());
           },
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
@@ -278,17 +311,17 @@ class _SprintDetailContent extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          sprint.name,
+                          widget.sprint.name,
                           style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
                             color: Theme.of(context).colorScheme.primary,
                           ),
                         ),
-                        if (sprint.description != null && sprint.description!.isNotEmpty) ...[
+                        if (widget.sprint.description != null && widget.sprint.description!.isNotEmpty) ...[
                           const SizedBox(height: 12),
                           Text(
-                            sprint.description!,
+                            widget.sprint.description!,
                             style: TextStyle(
                               fontSize: 16,
                               color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
@@ -305,7 +338,7 @@ class _SprintDetailContent extends StatelessWidget {
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              '${_formatDate(sprint.startDate)} - ${_formatDate(sprint.endDate)}',
+                              '${_formatDate(widget.sprint.startDate)} - ${_formatDate(widget.sprint.endDate)}',
                               style: TextStyle(
                                 fontSize: 14,
                                 color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
@@ -332,7 +365,7 @@ class _SprintDetailContent extends StatelessWidget {
                             ),
                           ),
                         ],
-                        if (sprint.acceptanceCriteria != null && sprint.acceptanceCriteria!.isNotEmpty) ...[
+                        if (widget.sprint.acceptanceCriteria != null && widget.sprint.acceptanceCriteria!.isNotEmpty) ...[
                           const SizedBox(height: 16),
                           Text(
                             'Criterios de Aceptación:',
@@ -343,7 +376,7 @@ class _SprintDetailContent extends StatelessWidget {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          ...sprint.acceptanceCriteria!.entries.map((entry) {
+                          ...widget.sprint.acceptanceCriteria!.entries.map((entry) {
                             return Padding(
                               padding: const EdgeInsets.only(bottom: 4),
                               child: Row(
@@ -388,7 +421,7 @@ class _SprintDetailContent extends StatelessWidget {
                     Row(
                       children: [
                         Text(
-                          '${tasks.length} tasks',
+                          '${widget.tasks.length} tasks',
                           style: TextStyle(
                             fontSize: 14,
                             color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
@@ -399,18 +432,18 @@ class _SprintDetailContent extends StatelessWidget {
                           icon: const Icon(Icons.add),
                           onPressed: () async {
                             // Navegar a crear task con el sprint pre-seleccionado
-                            final milestoneId = sprint.milestoneId;
+                            final milestoneId = widget.sprint.milestoneId;
                             final result = await Navigator.push(
-                              pageContext,
+                              widget.pageContext,
                               MaterialPageRoute(
                                 builder: (context) => CreateTaskPage(
                                   milestoneId: milestoneId,
-                                  initialSprintId: sprintId,
+                                  initialSprintId: widget.sprintId,
                                 ),
                               ),
                             );
-                            if (result != null && pageContext.mounted) {
-                              pageContext.read<SprintDetailCubit>().refresh(milestoneId, sprintId);
+                            if (result != null && widget.pageContext.mounted) {
+                              widget.pageContext.read<SprintDetailCubit>().refresh(milestoneId, widget.sprintId);
                             }
                           },
                           tooltip: 'Agregar Task al Sprint',
@@ -420,7 +453,7 @@ class _SprintDetailContent extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 16),
-                if (tasks.isEmpty)
+                if (widget.tasks.isEmpty)
                   Center(
                     child: Padding(
                       padding: const EdgeInsets.all(32),
@@ -443,7 +476,7 @@ class _SprintDetailContent extends StatelessWidget {
                     ),
                   )
                 else
-                  ...tasks.map((task) {
+                  ...widget.tasks.map((task) {
                     return TaskCard(
                       task: task,
                       completedChecklistItems: 0,
@@ -465,7 +498,7 @@ class _SprintDetailContent extends StatelessWidget {
                                   create: (_) => TaskDetailCubit(
                                     getTaskByIdUseCase: getTaskByIdUseCase,
                                     getChecklistItemsUseCase: getChecklistItemsUseCase,
-                                  )..loadTask(milestoneId, task.id),
+                                  )..loadTask(widget.milestoneId, task.id),
                                 ),
                                 BlocProvider(
                                   create: (_) => ChecklistCubit(
@@ -476,8 +509,8 @@ class _SprintDetailContent extends StatelessWidget {
                                 ),
                               ],
                               child: TaskDetailPage(
-                                projectId: projectId,
-                                milestoneId: milestoneId,
+                                projectId: widget.projectId,
+                                milestoneId: widget.milestoneId,
                                 taskId: task.id,
                               ),
                             ),
@@ -485,17 +518,19 @@ class _SprintDetailContent extends StatelessWidget {
                         );
                         
                         // Refrescar el sprint después de regresar
-                        if (pageContext.mounted) {
-                          pageContext.read<SprintDetailCubit>().refresh(milestoneId, sprintId);
+                        if (widget.pageContext.mounted) {
+                          widget.pageContext.read<SprintDetailCubit>().refresh(widget.milestoneId, widget.sprintId);
                         }
                       },
                     );
                   }),
+                const SizedBox(height: 32),
+                _buildDailyEntrySection(context, widget.sprintId),
                 if (isFinished) ...[
                   const SizedBox(height: 32),
-                  _buildReviewSection(context),
+                  _buildReviewSection(context, widget.sprintId),
                   const SizedBox(height: 24),
-                  _buildRetrospectiveSection(context),
+                  _buildRetrospectiveSection(context, widget.sprintId),
                 ] else ...[
                   const SizedBox(height: 32),
                   Card(
@@ -532,7 +567,7 @@ class _SprintDetailContent extends StatelessWidget {
     );
   }
 
-  Widget _buildReviewSection(BuildContext context) {
+  Widget _buildReviewSection(BuildContext context, String sprintId) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -648,7 +683,7 @@ class _SprintDetailContent extends StatelessWidget {
     );
   }
 
-  Widget _buildRetrospectiveSection(BuildContext context) {
+  Widget _buildRetrospectiveSection(BuildContext context, String sprintId) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -756,6 +791,189 @@ class _SprintDetailContent extends StatelessWidget {
                 );
               }
               return RetrospectiveSummaryCard(retrospective: state.retrospective!);
+            }
+            return const SizedBox.shrink();
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDailyEntrySection(BuildContext context, String sprintId) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(
+              child: Text(
+                'Entrada Diaria',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+            ),
+            Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.list),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const DailyEntriesListPage(),
+                      ),
+                    );
+                  },
+                  tooltip: 'Ver todas las entradas diarias',
+                ),
+                BlocBuilder<GetDailyEntryByDateCubit, GetDailyEntryByDateState>(
+                  builder: (context, state) {
+                    if (state is GetDailyEntryByDateLoaded && state.dailyEntry != null) {
+                      return TextButton.icon(
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Ya has completado tu entrada diaria de hoy'),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.check_circle),
+                        label: const Text('Completado'),
+                      );
+                    } else {
+                      return TextButton.icon(
+                        onPressed: () async {
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => BlocProvider(
+                                create: (context) => CreateDailyEntryCubit(
+                                  createDailyEntryUseCase: context.read(),
+                                ),
+                                child: CreateDailyEntryPage(
+                                  sprintId: sprintId,
+                                ),
+                              ),
+                            ),
+                          );
+                          if (result != null && context.mounted) {
+                            // Esperar un poco para asegurar que la entrada se haya guardado
+                            await Future.delayed(const Duration(milliseconds: 500));
+                            if (context.mounted) {
+                              context.read<GetDailyEntryByDateCubit>().refresh(DateTime.now());
+                            }
+                          }
+                        },
+                        icon: const Icon(Icons.add),
+                        label: const Text('Crear Daily'),
+                      );
+                    }
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+            BlocBuilder<GetDailyEntryByDateCubit, GetDailyEntryByDateState>(
+              builder: (context, state) {
+                if (state is GetDailyEntryByDateLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (state is GetDailyEntryByDateError) {
+                  return Card(
+                    color: Colors.red.withValues(alpha: 0.1),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(
+                        'Error al cargar entrada diaria: ${state.message}',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                    ),
+                  );
+                }
+                if (state is GetDailyEntryByDateLoaded) {
+                  if (state.dailyEntry == null) {
+                return Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.calendar_today_outlined,
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'No has creado tu entrada diaria de hoy. Crea una para registrar tu progreso y recibir energía como recompensa.',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+              // Mostrar resumen de la entrada diaria de hoy
+              final entry = state.dailyEntry!;
+              return Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.check_circle,
+                            color: Colors.green,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Entrada diaria completada',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Theme.of(context).colorScheme.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        'Ayer: ${entry.notesYesterday}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Hoy: ${entry.notesToday}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
+                        ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
+                ),
+              );
             }
             return const SizedBox.shrink();
           },
