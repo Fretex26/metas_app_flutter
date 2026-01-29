@@ -185,25 +185,27 @@ class _ProjectDetailContent extends StatelessWidget {
         appBar: AppBar(
           title: const Text('Detalle del Proyecto'),
           actions: [
-            IconButton(
-              icon: const Icon(Icons.edit),
-              onPressed: () => _handleEdit(context),
-            ),
-            BlocBuilder<DeleteProjectCubit, DeleteProjectState>(
-              builder: (context, deleteState) {
-                final isDeleting = deleteState is DeleteProjectLoading;
-                return IconButton(
-                  icon: isDeleting
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.delete),
-                  onPressed: isDeleting ? null : () => _handleDelete(context),
-                );
-              },
-            ),
+            if (project.sponsoredGoalId == null)
+              IconButton(
+                icon: const Icon(Icons.edit),
+                onPressed: () => _handleEdit(context),
+              ),
+            if (project.sponsoredGoalId == null)
+              BlocBuilder<DeleteProjectCubit, DeleteProjectState>(
+                builder: (context, deleteState) {
+                  final isDeleting = deleteState is DeleteProjectLoading;
+                  return IconButton(
+                    icon: isDeleting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.delete),
+                    onPressed: isDeleting ? null : () => _handleDelete(context),
+                  );
+                },
+              ),
           ],
         ),
         body: RefreshIndicator(
@@ -335,23 +337,26 @@ class _ProjectDetailContent extends StatelessWidget {
             ),
           ),
         ),
-        floatingActionButton: FloatingActionButton(
-          heroTag: 'project_detail_fab',
-          onPressed: () {
-            final cubit = scaffoldContext.read<ProjectDetailCubit>();
-            Navigator.push(
-              scaffoldContext,
-              MaterialPageRoute(
-                builder: (context) => CreateMilestonePage(projectId: projectId),
-              ),
-            ).then((_) {
-              if (scaffoldContext.mounted) {
-                cubit.loadProject(projectId);
-              }
-            });
-          },
-          child: const Icon(Icons.add),
-        ),
+        floatingActionButton: project.sponsoredGoalId == null
+            ? FloatingActionButton(
+                heroTag: 'project_detail_fab',
+                onPressed: () {
+                  final cubit = scaffoldContext.read<ProjectDetailCubit>();
+                  Navigator.push(
+                    scaffoldContext,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          CreateMilestonePage(projectId: projectId),
+                    ),
+                  ).then((_) {
+                    if (scaffoldContext.mounted) {
+                      cubit.loadProject(projectId);
+                    }
+                  });
+                },
+                child: const Icon(Icons.add),
+              )
+            : null,
       ),
     );
   }

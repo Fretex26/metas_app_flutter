@@ -37,7 +37,7 @@ class SponsorDatasource {
   /// Se llama después de registrar un usuario con `role: sponsor` en [POST /api/users].
   /// El sponsor queda con estado **PENDING** hasta que un administrador lo apruebe.
   ///
-  /// [dto] - Datos del sponsor: businessName, description, category, contactEmail, logoUrl (opcional).
+  /// [dto] - Datos del sponsor: businessName, description, contactEmail, logoUrl (opcional).
   ///
   /// Lanza una excepción si:
   /// - El usuario no está autenticado (401)

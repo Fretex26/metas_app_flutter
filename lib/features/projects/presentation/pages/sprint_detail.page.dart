@@ -132,7 +132,7 @@ class SprintDetailPage extends StatelessWidget {
                   BlocProvider(
                     create: (context) => GetDailyEntryByDateCubit(
                       getDailyEntryByDateUseCase: context.read(),
-                    )..loadDailyEntryByDate(DateTime.now()),
+                    )..loadDailyEntryByDate(DateTime.now(), sprintId),
                   ),
                 ],
                 child: _SprintDetailContent(
@@ -193,7 +193,7 @@ class _SprintDetailContentState extends State<_SprintDetailContent> {
         final state = context.read<GetDailyEntryByDateCubit>().state;
         // Solo refrescar si no está cargando y no es un estado de error reciente
         if (state is! GetDailyEntryByDateLoading) {
-          context.read<GetDailyEntryByDateCubit>().refresh(DateTime.now());
+          context.read<GetDailyEntryByDateCubit>().refresh(DateTime.now(), widget.sprintId);
         }
       }
     });
@@ -297,7 +297,7 @@ class _SprintDetailContentState extends State<_SprintDetailContent> {
           onRefresh: () async {
             widget.pageContext.read<SprintDetailCubit>().refresh(widget.milestoneId, widget.sprintId);
             // También refrescar la entrada diaria
-            context.read<GetDailyEntryByDateCubit>().refresh(DateTime.now());
+            context.read<GetDailyEntryByDateCubit>().refresh(DateTime.now(), widget.sprintId);
           },
           child: SingleChildScrollView(
             padding: const EdgeInsets.all(16),
@@ -864,7 +864,7 @@ class _SprintDetailContentState extends State<_SprintDetailContent> {
                             // Esperar un poco para asegurar que la entrada se haya guardado
                             await Future.delayed(const Duration(milliseconds: 500));
                             if (context.mounted) {
-                              context.read<GetDailyEntryByDateCubit>().refresh(DateTime.now());
+                              context.read<GetDailyEntryByDateCubit>().refresh(DateTime.now(), widget.sprintId);
                             }
                           }
                         },

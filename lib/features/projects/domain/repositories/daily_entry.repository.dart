@@ -28,16 +28,16 @@ abstract class DailyEntryRepository {
   /// - Error del servidor (500)
   Future<List<DailyEntry>> getUserDailyEntries();
 
-  /// Obtiene la entrada diaria del usuario para una fecha específica.
-  /// 
-  /// [date] - Fecha para buscar la entrada diaria
-  /// 
-  /// Retorna la entrada diaria si existe para esa fecha, o null si no existe.
-  /// La búsqueda se realiza comparando el campo createdAt con el rango del día completo.
-  /// 
+  /// Obtiene la entrada diaria del usuario para una fecha y un sprint concretos.
+  ///
+  /// [date] - Fecha para buscar la entrada diaria.
+  /// [sprintId] - UUID del sprint (obligatorio). Cada daily entry pertenece a un sprint.
+  ///
+  /// Retorna la entrada diaria si existe para esa fecha en ese sprint, o null si no existe.
+  ///
   /// Lanza una excepción si:
-  /// - Formato de fecha inválido (400)
+  /// - Formato de fecha o sprintId inválido (400)
   /// - El usuario no está autenticado (401)
   /// - Error del servidor (500)
-  Future<DailyEntry?> getDailyEntryByDate(DateTime date);
+  Future<DailyEntry?> getDailyEntryByDate(DateTime date, String sprintId);
 }

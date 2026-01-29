@@ -18,28 +18,28 @@ class GetDailyEntryByDateCubit extends Cubit<GetDailyEntryByDateState> {
   })  : _getDailyEntryByDateUseCase = getDailyEntryByDateUseCase,
         super(GetDailyEntryByDateInitial());
 
-  /// Carga la entrada diaria para una fecha específica.
-  /// 
-  /// [date] - Fecha para buscar la entrada diaria
-  /// 
+  /// Carga la entrada diaria para una fecha y un sprint concretos.
+  ///
+  /// [date] - Fecha para buscar la entrada diaria.
+  /// [sprintId] - UUID del sprint (obligatorio). Cada daily entry pertenece a un sprint.
+  ///
   /// Emite estados de carga, éxito o error según el resultado de la operación.
-  /// Si no existe una entrada para esa fecha, emite GetDailyEntryByDateLoaded con null.
-  Future<void> loadDailyEntryByDate(DateTime date) async {
+  /// Si no existe una entrada para esa fecha en ese sprint, emite GetDailyEntryByDateLoaded con null.
+  Future<void> loadDailyEntryByDate(DateTime date, String sprintId) async {
     emit(GetDailyEntryByDateLoading());
     try {
-      final dailyEntry = await _getDailyEntryByDateUseCase(date);
+      final dailyEntry = await _getDailyEntryByDateUseCase(date, sprintId);
       emit(GetDailyEntryByDateLoaded(dailyEntry));
     } catch (e) {
       emit(GetDailyEntryByDateError(e.toString()));
     }
   }
 
-  /// Refresca la entrada diaria para una fecha específica.
-  /// 
-  /// [date] - Fecha para buscar la entrada diaria
-  /// 
-  /// Vuelve a cargar la entrada diaria desde el servidor.
-  void refresh(DateTime date) {
-    loadDailyEntryByDate(date);
+  /// Refresca la entrada diaria para una fecha y un sprint concretos.
+  ///
+  /// [date] - Fecha para buscar la entrada diaria.
+  /// [sprintId] - UUID del sprint (obligatorio).
+  void refresh(DateTime date, String sprintId) {
+    loadDailyEntryByDate(date, sprintId);
   }
 }
