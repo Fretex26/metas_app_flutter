@@ -147,6 +147,7 @@ class _ProjectsListPageState extends State<ProjectsListPage> {
         },
       ),
       floatingActionButton: FloatingActionButton(
+        heroTag: 'projects_list_fab',
         onPressed: () {
           Navigator.push(
             context,

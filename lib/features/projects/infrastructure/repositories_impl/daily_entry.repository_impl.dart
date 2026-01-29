@@ -41,9 +41,9 @@ class DailyEntryRepositoryImpl implements DailyEntryRepository {
   }
 
   @override
-  Future<DailyEntry?> getDailyEntryByDate(DateTime date) async {
+  Future<DailyEntry?> getDailyEntryByDate(DateTime date, String sprintId) async {
     try {
-      final dto = await _datasource.getDailyEntryByDate(date);
+      final dto = await _datasource.getDailyEntryByDate(date, sprintId);
       return dto?.toDomain();
     } catch (e) {
       rethrow;

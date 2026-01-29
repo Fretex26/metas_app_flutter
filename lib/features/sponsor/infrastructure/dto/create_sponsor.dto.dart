@@ -6,7 +6,6 @@
 /// Campos requeridos:
 /// - [businessName]: Nombre del negocio
 /// - [description]: Descripción del negocio
-/// - [category]: Categoría del negocio
 /// - [contactEmail]: Email de contacto
 ///
 /// Campos opcionales:
@@ -14,14 +13,12 @@
 class CreateSponsorDto {
   final String businessName;
   final String description;
-  final String category;
   final String contactEmail;
   final String? logoUrl;
 
   const CreateSponsorDto({
     required this.businessName,
     required this.description,
-    required this.category,
     required this.contactEmail,
     this.logoUrl,
   });
@@ -29,7 +26,6 @@ class CreateSponsorDto {
   Map<String, dynamic> toJson() => {
         'businessName': businessName,
         'description': description,
-        'category': category,
         'contactEmail': contactEmail,
         if (logoUrl != null && logoUrl!.isNotEmpty) 'logoUrl': logoUrl,
       };

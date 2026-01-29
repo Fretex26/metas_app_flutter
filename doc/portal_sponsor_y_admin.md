@@ -34,11 +34,11 @@ Archivos relevantes:
 ## 3. Registro sponsor
 
 - En registro (email/password o Google) el usuario puede elegir **“Patrocinar proyectos (rol sponsor)”**.
-- Si elige sponsor, se muestran campos extra: **Nombre del negocio**, **Descripción**, **Categoría**, **Email de contacto**.
+- Si elige sponsor, se muestran campos extra: **Nombre del negocio**, **Descripción**, **Email de contacto**.
 - Flujo:
   1. Firebase Auth (crear usuario o completar Google).
   2. `POST /api/users` con `role: sponsor`.
-  3. `POST /api/sponsors` con `businessName`, `description`, `category`, `contactEmail`.
+  3. `POST /api/sponsors` con `businessName`, `description`, `contactEmail`.
 - El sponsor queda **PENDING** hasta que un admin lo apruebe.
 
 Archivos:

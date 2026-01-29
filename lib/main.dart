@@ -69,6 +69,21 @@ import 'package:metas_app/features/projects/infrastructure/repositories_impl/rev
 import 'package:metas_app/features/projects/infrastructure/repositories_impl/retrospective.repository_impl.dart';
 import 'package:metas_app/features/projects/infrastructure/repositories_impl/pending_sprints.repository_impl.dart';
 import 'package:metas_app/features/projects/infrastructure/repositories_impl/daily_entry.repository_impl.dart';
+import 'package:metas_app/features/sponsored_goals/application/use_cases/create_sponsored_goal.use_case.dart';
+import 'package:metas_app/features/sponsored_goals/application/use_cases/delete_sponsored_goal.use_case.dart';
+import 'package:metas_app/features/sponsored_goals/application/use_cases/enroll_in_sponsored_goal.use_case.dart';
+import 'package:metas_app/features/sponsored_goals/application/use_cases/get_available_sponsored_goals.use_case.dart';
+import 'package:metas_app/features/sponsored_goals/application/use_cases/get_categories.use_case.dart';
+import 'package:metas_app/features/sponsored_goals/application/use_cases/get_my_sponsored_goals.use_case.dart';
+import 'package:metas_app/features/sponsored_goals/application/use_cases/get_project_milestones.use_case.dart' as sponsored_goals_milestones;
+import 'package:metas_app/features/sponsored_goals/application/use_cases/get_sponsored_goal_by_id.use_case.dart';
+import 'package:metas_app/features/sponsored_goals/application/use_cases/get_user_sponsored_projects.use_case.dart';
+import 'package:metas_app/features/sponsored_goals/application/use_cases/update_enrollment_status.use_case.dart';
+import 'package:metas_app/features/sponsored_goals/application/use_cases/update_sponsored_goal.use_case.dart';
+import 'package:metas_app/features/sponsored_goals/application/use_cases/verify_milestone.use_case.dart';
+import 'package:metas_app/features/sponsored_goals/domain/repositories/sponsored_goals.repository.dart';
+import 'package:metas_app/features/sponsored_goals/infrastructure/repositories_impl/sponsored_goals.repository_impl.dart';
+import 'package:metas_app/features/sponsored_goals/presentation/cubits/sponsored_goals.cubit.dart';
 import 'package:metas_app/features/projects/presentation/cubits/create_milestone.cubit.dart';
 import 'package:metas_app/features/projects/presentation/cubits/create_project.cubit.dart';
 import 'package:metas_app/features/projects/presentation/cubits/create_task.cubit.dart';
@@ -120,6 +135,7 @@ class MyApp extends StatelessWidget {
   final RetrospectiveRepository _retrospectiveRepository = RetrospectiveRepositoryImpl();
   final PendingSprintsRepository _pendingSprintsRepository = PendingSprintsRepositoryImpl();
   final DailyEntryRepository _dailyEntryRepository = DailyEntryRepositoryImpl();
+  final SponsoredGoalsRepository _sponsoredGoalsRepository = SponsoredGoalsRepositoryImpl();
 
   // Use Cases
   GetUserProjectsUseCase get _getUserProjectsUseCase => GetUserProjectsUseCase(_projectRepository);
@@ -178,6 +194,19 @@ class MyApp extends StatelessWidget {
   AdminRejectSponsorUseCase get _adminRejectSponsorUseCase => AdminRejectSponsorUseCase();
   AdminDisableSponsorUseCase get _adminDisableSponsorUseCase => AdminDisableSponsorUseCase();
   AdminEnableSponsorUseCase get _adminEnableSponsorUseCase => AdminEnableSponsorUseCase();
+  // Sponsored Goals
+  CreateSponsoredGoalUseCase get _createSponsoredGoalUseCase => CreateSponsoredGoalUseCase(_sponsoredGoalsRepository);
+  GetAvailableSponsoredGoalsUseCase get _getAvailableSponsoredGoalsUseCase => GetAvailableSponsoredGoalsUseCase(_sponsoredGoalsRepository);
+  EnrollInSponsoredGoalUseCase get _enrollInSponsoredGoalUseCase => EnrollInSponsoredGoalUseCase(_sponsoredGoalsRepository);
+  UpdateEnrollmentStatusUseCase get _updateEnrollmentStatusUseCase => UpdateEnrollmentStatusUseCase(_sponsoredGoalsRepository);
+  VerifyMilestoneUseCase get _verifyMilestoneUseCase => VerifyMilestoneUseCase(_sponsoredGoalsRepository);
+  GetUserSponsoredProjectsUseCase get _getUserSponsoredProjectsUseCase => GetUserSponsoredProjectsUseCase(_sponsoredGoalsRepository);
+  sponsored_goals_milestones.GetSponsoredProjectMilestonesUseCase get _getSponsoredProjectMilestonesUseCase => sponsored_goals_milestones.GetSponsoredProjectMilestonesUseCase(_sponsoredGoalsRepository);
+  GetCategoriesUseCase get _getCategoriesUseCase => GetCategoriesUseCase(_sponsoredGoalsRepository);
+  GetMySponsoredGoalsUseCase get _getMySponsoredGoalsUseCase => GetMySponsoredGoalsUseCase(_sponsoredGoalsRepository);
+  GetSponsoredGoalByIdUseCase get _getSponsoredGoalByIdUseCase => GetSponsoredGoalByIdUseCase(_sponsoredGoalsRepository);
+  UpdateSponsoredGoalUseCase get _updateSponsoredGoalUseCase => UpdateSponsoredGoalUseCase(_sponsoredGoalsRepository);
+  DeleteSponsoredGoalUseCase get _deleteSponsoredGoalUseCase => DeleteSponsoredGoalUseCase(_sponsoredGoalsRepository);
 
   @override
   Widget build(BuildContext context) {
@@ -328,6 +357,43 @@ class MyApp extends StatelessWidget {
         RepositoryProvider<AdminEnableSponsorUseCase>.value(
           value: _adminEnableSponsorUseCase,
         ),
+        // Sponsored Goals use cases
+        RepositoryProvider<CreateSponsoredGoalUseCase>.value(
+          value: _createSponsoredGoalUseCase,
+        ),
+        RepositoryProvider<GetAvailableSponsoredGoalsUseCase>.value(
+          value: _getAvailableSponsoredGoalsUseCase,
+        ),
+        RepositoryProvider<EnrollInSponsoredGoalUseCase>.value(
+          value: _enrollInSponsoredGoalUseCase,
+        ),
+        RepositoryProvider<UpdateEnrollmentStatusUseCase>.value(
+          value: _updateEnrollmentStatusUseCase,
+        ),
+        RepositoryProvider<VerifyMilestoneUseCase>.value(
+          value: _verifyMilestoneUseCase,
+        ),
+        RepositoryProvider<GetUserSponsoredProjectsUseCase>.value(
+          value: _getUserSponsoredProjectsUseCase,
+        ),
+        RepositoryProvider<sponsored_goals_milestones.GetSponsoredProjectMilestonesUseCase>.value(
+          value: _getSponsoredProjectMilestonesUseCase,
+        ),
+        RepositoryProvider<GetCategoriesUseCase>.value(
+          value: _getCategoriesUseCase,
+        ),
+        RepositoryProvider<GetMySponsoredGoalsUseCase>.value(
+          value: _getMySponsoredGoalsUseCase,
+        ),
+        RepositoryProvider<GetSponsoredGoalByIdUseCase>.value(
+          value: _getSponsoredGoalByIdUseCase,
+        ),
+        RepositoryProvider<UpdateSponsoredGoalUseCase>.value(
+          value: _updateSponsoredGoalUseCase,
+        ),
+        RepositoryProvider<DeleteSponsoredGoalUseCase>.value(
+          value: _deleteSponsoredGoalUseCase,
+        ),
       ],
       child: MultiBlocProvider(
         providers: [
@@ -375,6 +441,12 @@ class MyApp extends StatelessWidget {
           BlocProvider<GetUserDailyEntriesCubit>(
             create: (context) => GetUserDailyEntriesCubit(
               getUserDailyEntriesUseCase: _getUserDailyEntriesUseCase,
+            ),
+          ),
+          // Sponsored Goals
+          BlocProvider<SponsoredGoalsCubit>(
+            create: (context) => SponsoredGoalsCubit(
+              getAvailableSponsoredGoalsUseCase: _getAvailableSponsoredGoalsUseCase,
             ),
           ),
         ],

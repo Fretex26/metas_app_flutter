@@ -31,7 +31,6 @@ class _RegisterPageState extends State<RegisterPage> {
   final nameController = TextEditingController();
   final businessNameController = TextEditingController();
   final descriptionController = TextEditingController();
-  final categoryController = TextEditingController();
   final contactEmailController = TextEditingController();
   String? selectedRole;
 
@@ -57,12 +56,6 @@ class _RegisterPageState extends State<RegisterPage> {
       );
       return false;
     }
-    if (categoryController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Categoría es requerida')),
-      );
-      return false;
-    }
     if (contactEmailController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Email de contacto es requerido')),
@@ -77,7 +70,6 @@ class _RegisterPageState extends State<RegisterPage> {
     return CreateSponsorDto(
       businessName: businessNameController.text.trim(),
       description: descriptionController.text.trim(),
-      category: categoryController.text.trim(),
       contactEmail: contactEmailController.text.trim(),
     );
   }
@@ -144,7 +136,6 @@ class _RegisterPageState extends State<RegisterPage> {
     passwordConfirmationController.dispose();
     businessNameController.dispose();
     descriptionController.dispose();
-    categoryController.dispose();
     contactEmailController.dispose();
     super.dispose();
   }
@@ -256,12 +247,6 @@ class _RegisterPageState extends State<RegisterPage> {
                 MyTextFieldMultiline(
                   controller: descriptionController,
                   hintText: 'Descripción del negocio',
-                ),
-                SizedBox(height: 10),
-                MyTextField(
-                  controller: categoryController,
-                  hintText: 'Categoría',
-                  obscureText: false,
                 ),
                 SizedBox(height: 10),
                 MyTextField(

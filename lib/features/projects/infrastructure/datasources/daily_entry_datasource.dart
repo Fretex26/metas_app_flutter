@@ -80,7 +80,7 @@ class DailyEntryDatasource {
       // Manejar errores HTTP manualmente
       if (response.statusCode == 409) {
         // Extraer el mensaje del backend
-        String errorMessage = 'Ya existe una entrada diaria para el día de hoy. Solo se permite una entrada diaria por día.';
+        String errorMessage = 'Ya existe una entrada diaria para hoy en este sprint. Solo se permite una por día y sprint.';
         
         try {
           final responseData = response.data;
@@ -147,7 +147,7 @@ class DailyEntryDatasource {
         if (statusCode == 409) {
           // Intentar extraer el mensaje del backend para el error 409
           final responseData = e.response!.data;
-          String errorMessage = 'Ya existe una entrada diaria para el día de hoy. Solo se permite una entrada diaria por día.';
+          String errorMessage = 'Ya existe una entrada diaria para hoy en este sprint. Solo se permite una por día y sprint.';
           
           if (responseData is Map<String, dynamic>) {
             errorMessage = responseData['message'] ?? errorMessage;
@@ -228,33 +228,37 @@ class DailyEntryDatasource {
     }
   }
 
-  /// Obtiene la entrada diaria del usuario para una fecha específica.
-  /// 
-  /// Endpoint: GET /api/daily-entries/date/:date
-  /// 
-  /// [date] - Fecha en formato DateTime (se formatea como YYYY-MM-DD)
-  /// 
-  /// Retorna la entrada diaria si existe para esa fecha, o null si no existe.
-  /// La búsqueda se realiza comparando el campo createdAt con el rango del día completo.
-  /// 
+  /// Obtiene la entrada diaria del usuario para una fecha y un sprint concretos.
+  ///
+  /// Endpoint: GET /api/daily-entries/date/:date?sprintId=:sprintId
+  ///
+  /// [date] - Fecha en formato DateTime (se formatea como YYYY-MM-DD).
+  /// [sprintId] - UUID del sprint (obligatorio). Cada daily entry pertenece a un sprint.
+  ///
+  /// Retorna la entrada diaria si existe para esa fecha en ese sprint, o null si no existe
+  /// (el backend responde 404 cuando no hay entrada para esa fecha en el sprint).
+  ///
   /// Lanza una excepción si:
+  /// - sprintId ausente o no válido (400)
   /// - Formato de fecha inválido (400)
   /// - El usuario no está autenticado (401)
   /// - Error del servidor (500)
-  Future<DailyEntryResponseDto?> getDailyEntryByDate(DateTime date) async {
+  Future<DailyEntryResponseDto?> getDailyEntryByDate(
+    DateTime date,
+    String sprintId,
+  ) async {
     try {
       final token = await _getAuthToken();
-      // Formatear fecha como YYYY-MM-DD
       final dateString =
           '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
       final response = await _dio.get(
         '${ApiConfig.baseUrl}/api/daily-entries/date/$dateString',
+        queryParameters: {'sprintId': sprintId},
         options: Options(
           headers: {
             'Authorization': 'Bearer $token',
             'Content-Type': 'application/json',
           },
-          // Configurar validateStatus para que 200 con null no lance excepción
           validateStatus: (status) {
             return status != null && status < 500;
           },
@@ -263,71 +267,27 @@ class DailyEntryDatasource {
 
       if (response.statusCode == 200) {
         final body = response.data;
-        // Si la respuesta es null o está vacía, verificar si hay entradas cercanas (problema de zona horaria)
-        if (body == null || body == 'null' || (body is String && body.trim().isEmpty)) {
-          // Intentar obtener todas las entradas del usuario para verificar si hay una del día anterior o siguiente
-          // (problema común de zona horaria donde el servidor guarda en UTC y el cliente busca en hora local)
-          try {
-            final allEntries = await getUserDailyEntries();
-            
-            // Normalizar la fecha de búsqueda a UTC para comparar correctamente
-            final searchDate = DateTime.utc(date.year, date.month, date.day);
-            
-            // Buscar entradas del día buscado, día anterior o día siguiente (para manejar zona horaria)
-            final candidateEntries = allEntries.where((e) {
-              // Parsear la fecha de creación de la entrada
-              DateTime entryDate;
-              try {
-                // El createdAt viene como String ISO, parsearlo
-                entryDate = DateTime.parse(e.createdAt).toUtc();
-              } catch (e) {
-                return false;
-              }
-              
-              // Normalizar a solo fecha (sin hora)
-              final entryDateOnly = DateTime.utc(entryDate.year, entryDate.month, entryDate.day);
-              
-              // Calcular diferencia en días
-              final daysDiff = entryDateOnly.difference(searchDate).inDays;
-              
-              // Aceptar si es el mismo día, día anterior o día siguiente (rango de zona horaria)
-              return daysDiff >= -1 && daysDiff <= 1;
-            }).toList();
-            
-            if (candidateEntries.isNotEmpty) {
-              // Ordenar por fecha de creación (más reciente primero) y tomar la más cercana al día buscado
-              candidateEntries.sort((a, b) {
-                final dateA = DateTime.parse(a.createdAt).toUtc();
-                final dateB = DateTime.parse(b.createdAt).toUtc();
-                final diffA = (DateTime.utc(dateA.year, dateA.month, dateA.day).difference(searchDate).inDays).abs();
-                final diffB = (DateTime.utc(dateB.year, dateB.month, dateB.day).difference(searchDate).inDays).abs();
-                if (diffA != diffB) {
-                  return diffA.compareTo(diffB); // Menor diferencia primero
-                }
-                return dateB.compareTo(dateA); // Más reciente primero si misma diferencia
-              });
-              
-              final bestMatch = candidateEntries.first;
-              return bestMatch;
-            }
-          } catch (e) {
-            // Si hay error al verificar, continuar y retornar null
-          }
+        if (body == null || body is! Map<String, dynamic>) {
           return null;
         }
-        // Si hay datos, parsearlos
-        return DailyEntryResponseDto.fromJson(body as Map<String, dynamic>);
-      } else if (response.statusCode == 400) {
-        throw Exception('Formato de fecha inválido');
-      } else {
-        throw Exception('Error al obtener entrada diaria: ${response.statusCode}');
+        return DailyEntryResponseDto.fromJson(body);
       }
+      if (response.statusCode == 404) {
+        return null;
+      }
+      if (response.statusCode == 400) {
+        throw Exception('Formato de fecha o sprintId inválido');
+      }
+      throw Exception('Error al obtener entrada diaria: ${response.statusCode}');
     } on DioException catch (e) {
       if (e.response?.statusCode == 401) {
         throw Exception('No autorizado. Por favor, inicia sesión nuevamente.');
       }
       if (e.response?.statusCode == 400) {
-        throw Exception('Formato de fecha inválido');
+        throw Exception('Formato de fecha o sprintId inválido');
+      }
+      if (e.response?.statusCode == 404) {
+        return null;
       }
       if (e.type == DioExceptionType.connectionTimeout ||
           e.type == DioExceptionType.receiveTimeout) {
@@ -335,7 +295,6 @@ class DailyEntryDatasource {
       }
       rethrow;
     } catch (e) {
-      // Si ya es una Exception, relanzarla
       if (e is Exception) {
         rethrow;
       }
