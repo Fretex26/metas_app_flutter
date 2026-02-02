@@ -1,4 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:metas_app/features/admin/application/use_cases/admin_sponsors.use_cases.dart';
 import 'package:metas_app/features/admin/presentation/pages/admin_sponsors.page.dart';
@@ -98,10 +99,9 @@ import 'package:metas_app/themes/dark.mode.dart';
 import 'package:metas_app/themes/light.mode.dart';
 
 void main() async {
-  // Initialize Firebase
   WidgetsFlutterBinding.ensureInitialized();
+  FlutterNativeSplash.preserve(widgetsBinding: WidgetsBinding.instance);
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  // Run the app
   runApp(MyApp());
 }
 
@@ -456,6 +456,10 @@ class MyApp extends StatelessWidget {
         darkTheme: darkMode,
         home: BlocConsumer<AuthCubit, AuthStates>(
           builder: (context, state) {
+            // Quitar splash cuando la UI esté lista para mostrarse
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              FlutterNativeSplash.remove();
+            });
             // Usuario no autenticado → mostrar página de login/registro
             if (state is Unauthenticated) {
               return const AuthPage();
