@@ -1,5 +1,9 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/services.dart';
 import 'package:metas_app/core/config/api_config.dart';
 import 'package:metas_app/features/projects/infrastructure/dto/create_project.dto.dart';
 import 'package:metas_app/features/projects/infrastructure/dto/project_progress.dto.dart';
@@ -38,6 +42,18 @@ class ProjectDatasource {
     return token;
   }
 
+  /// En Android, GET vía canal nativo (evita bloqueos de la pila HTTP de Dart).
+  Future<({int statusCode, String body})?> _nativeGet(String url, String token) async {
+    if (!Platform.isAndroid) return null;
+    const channel = MethodChannel('com.tfm.metas_app/auth_me');
+    final result = await channel.invokeMethod<Map>('getAuthMe', {'url': url, 'token': token}).timeout(
+      const Duration(seconds: 8),
+      onTimeout: () => null,
+    );
+    if (result == null) return null;
+    return (statusCode: result['statusCode'] as int, body: (result['body'] as String?) ?? '');
+  }
+
   /// Obtiene todos los proyectos del usuario autenticado.
   /// 
   /// Endpoint: GET /api/projects
@@ -48,10 +64,31 @@ class ProjectDatasource {
   /// - El usuario no está autenticado (401)
   /// - Hay un error de red o del servidor
   Future<List<ProjectResponseDto>> getUserProjects() async {
+    final token = await _getAuthToken();
+    final url = '${ApiConfig.baseUrl}/api/projects';
     try {
-      final token = await _getAuthToken();
+      var result = await _nativeGet(url, token);
+      if (result == null && Platform.isAndroid) {
+        await Future.delayed(const Duration(seconds: 1));
+        result = await _nativeGet(url, token);
+      }
+      if (result != null) {
+        if (result.statusCode == 401) {
+          throw Exception('No autorizado. Por favor, inicia sesión nuevamente.');
+        }
+        if (result.statusCode != 200) {
+          throw Exception('Error del servidor: ${result.statusCode}. ${result.body.isNotEmpty ? result.body : ""}');
+        }
+        final List<dynamic> data = jsonDecode(result.body) as List<dynamic>;
+        return data.map((json) => ProjectResponseDto.fromJson(json as Map<String, dynamic>)).toList();
+      }
+      if (Platform.isAndroid) {
+        throw Exception(
+          'No se pudo conectar. Comprueba tu conexión a internet y toca Reintentar.',
+        );
+      }
       final response = await _dio.get(
-        '${ApiConfig.baseUrl}/api/projects',
+        url,
         options: Options(
           headers: {
             'Authorization': 'Bearer $token',
@@ -59,7 +96,6 @@ class ProjectDatasource {
           },
         ),
       );
-
       final List<dynamic> data = response.data as List<dynamic>;
       return data.map((json) => ProjectResponseDto.fromJson(json as Map<String, dynamic>)).toList();
     } on DioException catch (e) {
@@ -127,10 +163,30 @@ class ProjectDatasource {
   /// - El usuario no tiene permisos (403)
   /// - El usuario no está autenticado (401)
   Future<ProjectProgressDto> getProjectProgress(String id) async {
+    final token = await _getAuthToken();
+    final url = '${ApiConfig.baseUrl}/api/projects/$id/progress';
     try {
-      final token = await _getAuthToken();
+      var result = await _nativeGet(url, token);
+      if (result != null) {
+        if (result.statusCode == 401) {
+          throw Exception('No autorizado. Por favor, inicia sesión nuevamente.');
+        }
+        if (result.statusCode == 404) {
+          throw Exception('Proyecto no encontrado');
+        }
+        if (result.statusCode == 403) {
+          throw Exception('No tienes permiso para acceder a este proyecto');
+        }
+        if (result.statusCode != 200) {
+          throw Exception('Error del servidor: ${result.statusCode}. ${result.body.isNotEmpty ? result.body : ""}');
+        }
+        return ProjectProgressDto.fromJson(jsonDecode(result.body) as Map<String, dynamic>);
+      }
+      if (Platform.isAndroid) {
+        throw Exception('No se pudo obtener el progreso.');
+      }
       final response = await _dio.get(
-        '${ApiConfig.baseUrl}/api/projects/$id/progress',
+        url,
         options: Options(
           headers: {
             'Authorization': 'Bearer $token',
@@ -138,7 +194,6 @@ class ProjectDatasource {
           },
         ),
       );
-
       return ProjectProgressDto.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       if (e.response?.statusCode == 401) {

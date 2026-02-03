@@ -20,11 +20,14 @@ class ProjectsListPage extends StatefulWidget {
 }
 
 class _ProjectsListPageState extends State<ProjectsListPage> {
-  /// Carga los proyectos al inicializar la página
   @override
   void initState() {
     super.initState();
-    context.read<ProjectsCubit>().loadProjects();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.delayed(const Duration(seconds: 2), () {
+        if (mounted) context.read<ProjectsCubit>().loadProjects();
+      });
+    });
   }
 
   @override
@@ -51,7 +54,7 @@ class _ProjectsListPageState extends State<ProjectsListPage> {
           }
         },
         builder: (context, state) {
-          if (state is ProjectsLoading) {
+          if (state is ProjectsInitial || state is ProjectsLoading) {
             return const Center(child: CircularProgressIndicator());
           }
 

@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:metas_app/features/projects/presentation/components/pending_sprints_dialog.dart';
 import 'package:metas_app/features/projects/presentation/cubits/pending_sprints.cubit.dart';
 import 'package:metas_app/features/projects/presentation/cubits/pending_sprints.states.dart';
+import 'package:metas_app/features/projects/presentation/cubits/projects.cubit.dart';
+import 'package:metas_app/features/projects/presentation/cubits/projects.states.dart';
 import 'package:metas_app/features/projects/presentation/pages/projects_list.page.dart';
 import 'package:metas_app/features/projects/presentation/pages/rewards_list.page.dart';
 import 'package:metas_app/features/sponsored_goals/presentation/pages/available_sponsored_goals.page.dart';
@@ -45,15 +47,6 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
     }
   }
 
-  @override
-  void initState() {
-    super.initState();
-    // Verificar sprints pendientes después del primer frame
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _checkPendingSprints();
-    });
-  }
-
   void _checkPendingSprints() {
     if (widget.isSponsor) return;
     if (!_hasCheckedPendingSprints && mounted) {
@@ -64,27 +57,34 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<PendingSprintsCubit, PendingSprintsState>(
+    return BlocListener<ProjectsCubit, ProjectsState>(
       listener: (context, state) {
-        if (state is PendingSprintsLoaded && state.pendingSprints.isNotEmpty) {
-          // Mostrar el diálogo solo si hay sprints pendientes
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              showDialog(
-                context: context,
-                barrierDismissible: true,
-                builder: (dialogContext) => BlocProvider.value(
-                  value: context.read<PendingSprintsCubit>(),
-                  child: PendingSprintsDialog(
-                    pendingSprints: state.pendingSprints,
-                  ),
-                ),
-              );
-            }
-          });
+        // Cargar sprints pendientes solo cuando proyectos termine (evita concurrencia en Android)
+        if (state is ProjectsLoaded || state is ProjectsError) {
+          _checkPendingSprints();
         }
       },
-      child: Scaffold(
+      child: BlocListener<PendingSprintsCubit, PendingSprintsState>(
+        listener: (context, state) {
+          if (state is PendingSprintsLoaded && state.pendingSprints.isNotEmpty) {
+            // Mostrar el diálogo solo si hay sprints pendientes
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                showDialog(
+                  context: context,
+                  barrierDismissible: true,
+                  builder: (dialogContext) => BlocProvider.value(
+                    value: context.read<PendingSprintsCubit>(),
+                    child: PendingSprintsDialog(
+                      pendingSprints: state.pendingSprints,
+                    ),
+                  ),
+                );
+              }
+            });
+          }
+        },
+        child: Scaffold(
         body: IndexedStack(
           index: _currentIndex,
           children: _buildPages(),
@@ -173,6 +173,7 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
                   ),
                 ],
           ),
+        ),
         ),
       ),
     );

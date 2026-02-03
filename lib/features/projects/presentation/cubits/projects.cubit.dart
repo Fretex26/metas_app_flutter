@@ -38,17 +38,14 @@ class ProjectsCubit extends Cubit<ProjectsState> {
   Future<void> loadProjects() async {
     emit(ProjectsLoading());
     try {
-      // Obtener todos los proyectos del usuario
       final projects = await _getUserProjectsUseCase();
       final progressMap = <String, dynamic>{};
 
-      // Cargar progreso para cada proyecto en paralelo para mejor rendimiento
       final progressFutures = projects.map((project) async {
         try {
           final progress = await _getProjectProgressUseCase(project.id);
           return MapEntry(project.id, progress);
         } catch (e) {
-          // Si falla la carga de progreso de un proyecto, se omite pero se mantienen los demás
           return null;
         }
       }).toList();

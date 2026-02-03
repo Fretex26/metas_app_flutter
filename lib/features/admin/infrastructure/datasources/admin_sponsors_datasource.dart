@@ -1,5 +1,9 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/services.dart';
 import 'package:metas_app/core/config/api_config.dart';
 import 'package:metas_app/features/admin/infrastructure/dto/admin_sponsor_response.dto.dart';
 
@@ -39,6 +43,18 @@ class AdminSponsorsDatasource {
     return token;
   }
 
+  /// En Android, GET vía canal nativo (evita bloqueos de la pila HTTP de Dart).
+  Future<({int statusCode, String body})?> _nativeGet(String url, String token) async {
+    if (!Platform.isAndroid) return null;
+    const channel = MethodChannel('com.tfm.metas_app/auth_me');
+    final result = await channel.invokeMethod<Map>('getAuthMe', {'url': url, 'token': token}).timeout(
+      const Duration(seconds: 25),
+      onTimeout: () => throw Exception('Timeout'),
+    );
+    if (result == null) return null;
+    return (statusCode: result['statusCode'] as int, body: (result['body'] as String?) ?? '');
+  }
+
   /// Obtiene la lista de sponsors pendientes de aprobación.
   ///
   /// Endpoint: GET /api/admin/sponsors/pending
@@ -50,10 +66,32 @@ class AdminSponsorsDatasource {
   /// - El usuario no tiene rol admin (403)
   /// - Error de red o del servidor
   Future<List<AdminSponsorResponseDto>> getPending() async {
-    var token = await _getAuthToken();
+    final token = await _getAuthToken();
+    final url = '${ApiConfig.baseUrl}/api/admin/sponsors/pending';
     try {
+      final native = await _nativeGet(url, token);
+      if (native != null) {
+        if (native.statusCode == 401) {
+          throw Exception(
+            'Tu sesión ha expirado o no tienes acceso. Por favor, cierra sesión e inicia sesión nuevamente.',
+          );
+        }
+        if (native.statusCode == 403) {
+          throw Exception(
+            'No tienes permisos para acceder a esta sección. '
+            'Contacta al administrador del sistema si crees que esto es un error.',
+          );
+        }
+        if (native.statusCode != 200) {
+          throw Exception('Error del servidor: ${native.statusCode}. ${native.body.isNotEmpty ? native.body : ""}');
+        }
+        final List<dynamic> data = jsonDecode(native.body) as List<dynamic>;
+        return data
+            .map((e) => AdminSponsorResponseDto.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
       final response = await _dio.get(
-        '${ApiConfig.baseUrl}/api/admin/sponsors/pending',
+        url,
         options: Options(
           headers: {
             'Authorization': 'Bearer $token',
@@ -126,9 +164,31 @@ class AdminSponsorsDatasource {
   Future<List<AdminSponsorResponseDto>> getAll({String? status}) async {
     final token = await _getAuthToken();
     final query = status != null ? '?status=$status' : '';
+    final url = '${ApiConfig.baseUrl}/api/admin/sponsors$query';
     try {
+      final native = await _nativeGet(url, token);
+      if (native != null) {
+        if (native.statusCode == 401) {
+          throw Exception(
+            'Tu sesión ha expirado o no tienes acceso. Por favor, cierra sesión e inicia sesión nuevamente.',
+          );
+        }
+        if (native.statusCode == 403) {
+          throw Exception(
+            'No tienes permisos para acceder a esta sección. '
+            'Contacta al administrador del sistema si crees que esto es un error.',
+          );
+        }
+        if (native.statusCode != 200) {
+          throw Exception('Error del servidor: ${native.statusCode}. ${native.body.isNotEmpty ? native.body : ""}');
+        }
+        final List<dynamic> data = jsonDecode(native.body) as List<dynamic>;
+        return data
+            .map((e) => AdminSponsorResponseDto.fromJson(e as Map<String, dynamic>))
+            .toList();
+      }
       final response = await _dio.get(
-        '${ApiConfig.baseUrl}/api/admin/sponsors$query',
+        url,
         options: Options(
           headers: {
             'Authorization': 'Bearer $token',
@@ -166,9 +226,33 @@ class AdminSponsorsDatasource {
   /// - Error de red o del servidor
   Future<AdminSponsorResponseDto> getById(String sponsorId) async {
     final token = await _getAuthToken();
+    final url = '${ApiConfig.baseUrl}/api/admin/sponsors/$sponsorId';
     try {
+      final native = await _nativeGet(url, token);
+      if (native != null) {
+        if (native.statusCode == 401) {
+          throw Exception(
+            'Tu sesión ha expirado o no tienes acceso. Por favor, cierra sesión e inicia sesión nuevamente.',
+          );
+        }
+        if (native.statusCode == 403) {
+          throw Exception(
+            'No tienes permisos para acceder a esta sección. '
+            'Contacta al administrador del sistema si crees que esto es un error.',
+          );
+        }
+        if (native.statusCode == 404) {
+          throw Exception('Sponsor no encontrado.');
+        }
+        if (native.statusCode != 200) {
+          throw Exception('Error del servidor: ${native.statusCode}. ${native.body.isNotEmpty ? native.body : ""}');
+        }
+        return AdminSponsorResponseDto.fromJson(
+          jsonDecode(native.body) as Map<String, dynamic>,
+        );
+      }
       final response = await _dio.get(
-        '${ApiConfig.baseUrl}/api/admin/sponsors/$sponsorId',
+        url,
         options: Options(
           headers: {
             'Authorization': 'Bearer $token',
