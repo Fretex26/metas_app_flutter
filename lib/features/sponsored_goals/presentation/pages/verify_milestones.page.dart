@@ -34,16 +34,16 @@ class _VerifyMilestonesPageState extends State<VerifyMilestonesPage> {
     super.dispose();
   }
 
-  void _searchUser() {
+  void _searchUser(BuildContext blocContext) {
     final email = _emailController.text.trim();
     if (email.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(blocContext).showSnackBar(
         const SnackBar(content: Text('Ingresa un email válido')),
       );
       return;
     }
 
-    context.read<VerifyMilestonesCubit>().loadUserProjects(email);
+    blocContext.read<VerifyMilestonesCubit>().loadUserProjects(email);
   }
 
   @override
@@ -56,31 +56,32 @@ class _VerifyMilestonesPageState extends State<VerifyMilestonesPage> {
             context.read<sponsored_goals_milestones.GetSponsoredProjectMilestonesUseCase>(),
         verifyMilestoneUseCase: context.read<VerifyMilestoneUseCase>(),
       ),
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Verificar Milestones'),
-        ),
-        body: BlocListener<VerifyMilestonesCubit, VerifyMilestonesState>(
-          listener: (context, state) {
-            if (state is VerifyMilestonesError) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.message),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
-            if (state is VerifyMilestonesVerified) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Milestone verificada exitosamente'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            }
-          },
-          child: Column(
-            children: [
+      child: Builder(
+        builder: (blocContext) => Scaffold(
+          appBar: AppBar(
+            title: const Text('Verificar Milestones'),
+          ),
+          body: BlocListener<VerifyMilestonesCubit, VerifyMilestonesState>(
+            listener: (context, state) {
+              if (state is VerifyMilestonesError) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(state.message),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+              if (state is VerifyMilestonesVerified) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Milestone verificada exitosamente'),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            },
+            child: Column(
+              children: [
               // Barra de búsqueda
               Padding(
                 padding: const EdgeInsets.all(16),
@@ -96,12 +97,12 @@ class _VerifyMilestonesPageState extends State<VerifyMilestonesPage> {
                           prefixIcon: Icon(Icons.search),
                         ),
                         keyboardType: TextInputType.emailAddress,
-                        onSubmitted: (_) => _searchUser(),
+                        onSubmitted: (_) => _searchUser(blocContext),
                       ),
                     ),
                     const SizedBox(width: 8),
                     FilledButton(
-                      onPressed: _searchUser,
+                      onPressed: () => _searchUser(blocContext),
                       child: const Text('Buscar'),
                     ),
                   ],
@@ -197,15 +198,23 @@ class _VerifyMilestonesPageState extends State<VerifyMilestonesPage> {
                                   return ListTile(
                                     selected: isSelected,
                                     title: Text(project.name),
-                                    subtitle: project.description != null
-                                        ? Text(
+                                    subtitle: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (project.description != null &&
+                                            project.description!.isNotEmpty)
+                                          Text(
                                             project.description!,
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
-                                          )
-                                        : null,
-                                    trailing: StatusBadge(
-                                      status: project.status ?? 'pending',
+                                          ),
+                                        const SizedBox(height: 4),
+                                        StatusBadge(
+                                          status: project.status ?? 'pending',
+                                        ),
+                                      ],
                                     ),
                                     onTap: () {
                                       context
@@ -246,7 +255,8 @@ class _VerifyMilestonesPageState extends State<VerifyMilestonesPage> {
                   },
                 ),
               ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -275,8 +285,6 @@ class _VerifyMilestonesPageState extends State<VerifyMilestonesPage> {
       itemBuilder: (context, index) {
         final milestone = milestones[index];
         final canVerify = milestone.status == 'in_progress';
-        final isVerifying = false; // TODO: obtener del estado
-
         return Card(
           margin: const EdgeInsets.only(bottom: 12),
           child: Padding(

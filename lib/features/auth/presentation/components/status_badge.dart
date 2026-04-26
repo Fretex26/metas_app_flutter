@@ -78,12 +78,17 @@ class StatusBadge extends StatelessWidget {
           children: [
             Icon(_getStatusIcon(), size: 14, color: color),
             const SizedBox(width: 4),
-            Text(
-              _getStatusText(),
-              style: TextStyle(
-                color: color,
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
+            Flexible(
+              child: Text(
+                _getStatusText(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                softWrap: false,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ],
@@ -103,12 +108,17 @@ class StatusBadge extends StatelessWidget {
         children: [
           Icon(_getStatusIcon(), size: 16, color: color),
           const SizedBox(width: 6),
-          Text(
-            _getStatusText(),
-            style: TextStyle(
-              color: color,
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
+          Flexible(
+            child: Text(
+              _getStatusText(),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              softWrap: false,
+              style: TextStyle(
+                color: color,
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
         ],

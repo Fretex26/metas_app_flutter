@@ -4,6 +4,7 @@ class ApiConfig {
   // Ejemplo: 'https://tu-api-produccion.com' para producción
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'https://metasappback-production.up.railway.app',
+    //defaultValue: 'https://metasappback-production.up.railway.app',
+    defaultValue: 'http://192.168.1.24:3000',
   );
 }
