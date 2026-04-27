@@ -11,10 +11,10 @@ import 'package:metas_app/features/sponsored_goals/infrastructure/dto/update_enr
 import 'package:metas_app/features/sponsored_goals/infrastructure/dto/update_sponsored_goal.dto.dart';
 
 /// Datasource para realizar operaciones HTTP relacionadas con Sponsored Goals.
-/// 
+///
 /// Implementa las llamadas a la API del backend usando Dio y maneja la autenticación
 /// mediante tokens de Firebase. Todas las peticiones incluyen el header de autorización.
-/// 
+///
 /// Endpoints utilizados:
 /// - POST /api/sponsored-goals (crear sponsored goal - solo sponsors)
 /// - GET /api/sponsored-goals/available (listar disponibles - usuarios normales)
@@ -28,14 +28,14 @@ class SponsoredGoalsDatasource {
   final Dio _dio;
 
   /// Constructor del datasource
-  /// 
+  ///
   /// [dio] - Cliente Dio opcional para inyección de dependencias (útil para testing)
   SponsoredGoalsDatasource({Dio? dio}) : _dio = dio ?? Dio();
 
   /// Obtiene el token de autenticación de Firebase del usuario actual.
-  /// 
+  ///
   /// Retorna el token ID de Firebase necesario para autenticar las peticiones.
-  /// 
+  ///
   /// Lanza una excepción si:
   /// - El usuario no está autenticado
   /// - No se puede obtener el token
@@ -52,13 +52,13 @@ class SponsoredGoalsDatasource {
   }
 
   /// Crea un nuevo Sponsored Goal (solo sponsors aprobados).
-  /// 
+  ///
   /// Endpoint: POST /api/sponsored-goals
-  /// 
+  ///
   /// [dto] - Datos del sponsored goal a crear
-  /// 
+  ///
   /// Retorna el sponsored goal creado con su ID asignado.
-  /// 
+  ///
   /// Lanza una excepción si:
   /// - El usuario no es sponsor aprobado (403)
   /// - El proyecto no pertenece al sponsor (400)
@@ -117,11 +117,11 @@ class SponsoredGoalsDatasource {
   }
 
   /// Lista los Sponsored Goals del sponsor autenticado.
-  /// 
+  ///
   /// Endpoint: GET /api/sponsored-goals
-  /// 
+  ///
   /// Retorna los objetivos creados por el sponsor.
-  /// 
+  ///
   /// Lanza una excepción si:
   /// - El usuario no tiene perfil de sponsor (404)
   /// - El usuario no está autenticado (401)
@@ -139,9 +139,10 @@ class SponsoredGoalsDatasource {
       );
       final List<dynamic> data = response.data as List<dynamic>;
       return data
-          .map((json) => SponsoredGoalResponseDto.fromJson(
-                json as Map<String, dynamic>,
-              ))
+          .map(
+            (json) =>
+                SponsoredGoalResponseDto.fromJson(json as Map<String, dynamic>),
+          )
           .toList();
     } on DioException catch (e) {
       if (e.response?.statusCode == 401) {
@@ -157,9 +158,9 @@ class SponsoredGoalsDatasource {
   }
 
   /// Obtiene un Sponsored Goal por ID (solo si pertenece al sponsor).
-  /// 
+  ///
   /// Endpoint: GET /api/sponsored-goals/:id
-  /// 
+  ///
   /// Lanza una excepción si:
   /// - Objetivo no encontrado o sin perfil sponsor (404)
   /// - El objetivo no pertenece al sponsor (403)
@@ -197,9 +198,9 @@ class SponsoredGoalsDatasource {
   }
 
   /// Actualiza un Sponsored Goal (PATCH parcial). Solo el sponsor dueño.
-  /// 
+  ///
   /// Endpoint: PATCH /api/sponsored-goals/:id
-  /// 
+  ///
   /// Lanza una excepción si:
   /// - 404 objetivo o perfil, 403 no dueño, 400 validación
   Future<SponsoredGoalResponseDto> updateSponsoredGoal(
@@ -244,11 +245,11 @@ class SponsoredGoalsDatasource {
   }
 
   /// Elimina un Sponsored Goal. Solo el sponsor dueño.
-  /// 
+  ///
   /// Endpoint: DELETE /api/sponsored-goals/:id
-  /// 
+  ///
   /// Respuesta: 204 No Content.
-  /// 
+  ///
   /// Lanza una excepción si:
   /// - 404 objetivo o perfil, 403 no dueño
   Future<void> deleteSponsoredGoal(String id) async {
@@ -282,13 +283,13 @@ class SponsoredGoalsDatasource {
   }
 
   /// Lista los Sponsored Goals disponibles para usuarios normales.
-  /// 
+  ///
   /// Endpoint: GET /api/sponsored-goals/available?categoryIds=id1,id2
-  /// 
+  ///
   /// [categoryIds] - IDs de categorías opcionales para filtrar (separados por coma)
-  /// 
+  ///
   /// Retorna una lista de sponsored goals activos (fechas válidas y cupo disponible).
-  /// 
+  ///
   /// Lanza una excepción si:
   /// - El usuario no está autenticado (401)
   /// - Hay un error de red o del servidor
@@ -314,9 +315,10 @@ class SponsoredGoalsDatasource {
 
       final List<dynamic> data = response.data as List<dynamic>;
       return data
-          .map((json) => SponsoredGoalResponseDto.fromJson(
-                json as Map<String, dynamic>,
-              ))
+          .map(
+            (json) =>
+                SponsoredGoalResponseDto.fromJson(json as Map<String, dynamic>),
+          )
           .toList();
     } on DioException catch (e) {
       if (e.response?.statusCode == 401) {
@@ -329,14 +331,14 @@ class SponsoredGoalsDatasource {
   }
 
   /// Inscribe a un usuario normal a un Sponsored Goal.
-  /// 
+  ///
   /// Endpoint: POST /api/sponsored-goals/:id/enroll
-  /// 
+  ///
   /// [sponsoredGoalId] - Identificador único del sponsored goal (UUID)
-  /// 
+  ///
   /// Retorna la inscripción creada. Automáticamente se duplica el proyecto
   /// en los proyectos del usuario.
-  /// 
+  ///
   /// Lanza una excepción si:
   /// - El sponsored goal no existe (404)
   /// - El usuario ya está inscrito (409)
@@ -371,7 +373,8 @@ class SponsoredGoalsDatasource {
         throw Exception('Ya estás inscrito en este objetivo');
       }
       if (e.response?.statusCode == 400) {
-        final errorMessage = e.response?.data?['message'] ?? 'Error de validación';
+        final errorMessage =
+            e.response?.data?['message'] ?? 'Error de validación';
         throw Exception(errorMessage);
       }
       rethrow;
@@ -381,14 +384,14 @@ class SponsoredGoalsDatasource {
   }
 
   /// Actualiza el estado de una inscripción (solo sponsors).
-  /// 
+  ///
   /// Endpoint: PATCH /api/sponsored-goals/enrollments/:enrollmentId/status
-  /// 
+  ///
   /// [enrollmentId] - Identificador único de la inscripción (UUID)
   /// [dto] - DTO con el nuevo estado
-  /// 
+  ///
   /// Retorna la inscripción actualizada.
-  /// 
+  ///
   /// Lanza una excepción si:
   /// - El enrollment no existe (404)
   /// - El usuario no es sponsor (403)
@@ -430,13 +433,13 @@ class SponsoredGoalsDatasource {
   }
 
   /// Verifica una milestone de un proyecto patrocinado (solo sponsors).
-  /// 
+  ///
   /// Endpoint: POST /api/sponsored-goals/milestones/:milestoneId/verify
-  /// 
+  ///
   /// [milestoneId] - Identificador único de la milestone (UUID)
-  /// 
+  ///
   /// Retorna la milestone verificada con status "completed".
-  /// 
+  ///
   /// Lanza una excepción si:
   /// - La milestone no existe (404)
   /// - El usuario no es sponsor (403)
@@ -470,7 +473,8 @@ class SponsoredGoalsDatasource {
         throw Exception('Milestone no encontrada');
       }
       if (e.response?.statusCode == 400) {
-        final errorMessage = e.response?.data?['message'] ?? 'Error de validación';
+        final errorMessage =
+            e.response?.data?['message'] ?? 'Error de validación';
         throw Exception(errorMessage);
       }
       rethrow;
@@ -479,15 +483,61 @@ class SponsoredGoalsDatasource {
     }
   }
 
+  /// Actualiza el estado de una milestone de un proyecto patrocinado (solo sponsors).
+  ///
+  /// Endpoint: PATCH /api/sponsored-goals/milestones/:milestoneId/status
+  Future<MilestoneResponseDto> updateSponsoredMilestoneStatus(
+    String milestoneId,
+    String status,
+  ) async {
+    try {
+      final token = await _getAuthToken();
+      final response = await _dio.patch(
+        '${ApiConfig.baseUrl}/api/sponsored-goals/milestones/$milestoneId/status',
+        data: {'status': status},
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+          },
+        ),
+      );
+
+      return MilestoneResponseDto.fromJson(
+        response.data as Map<String, dynamic>,
+      );
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        throw Exception('No autorizado. Por favor, inicia sesión nuevamente.');
+      }
+      if (e.response?.statusCode == 403) {
+        throw Exception(
+          'Solo patrocinadores pueden actualizar estados de milestones',
+        );
+      }
+      if (e.response?.statusCode == 404) {
+        throw Exception('Milestone no encontrada');
+      }
+      if (e.response?.statusCode == 400) {
+        final errorMessage =
+            e.response?.data?['message'] ?? 'Error de validación';
+        throw Exception(errorMessage);
+      }
+      rethrow;
+    } catch (e) {
+      throw Exception('Error al actualizar estado de milestone: $e');
+    }
+  }
+
   /// Obtiene los proyectos patrocinados de un usuario (solo sponsors).
-  /// 
+  ///
   /// Endpoint: GET /api/sponsored-goals/users/:email/projects
-  /// 
+  ///
   /// [userEmail] - Email del usuario del cual obtener los proyectos
-  /// 
+  ///
   /// Retorna una lista de proyectos patrocinados del usuario que pertenecen
   /// a los sponsored goals del sponsor que hace la petición.
-  /// 
+  ///
   /// Lanza una excepción si:
   /// - El usuario no es sponsor (403)
   /// - El usuario no está autenticado (401)
@@ -509,9 +559,9 @@ class SponsoredGoalsDatasource {
 
       final List<dynamic> data = response.data as List<dynamic>;
       return data
-          .map((json) => ProjectResponseDto.fromJson(
-                json as Map<String, dynamic>,
-              ))
+          .map(
+            (json) => ProjectResponseDto.fromJson(json as Map<String, dynamic>),
+          )
           .toList();
     } on DioException catch (e) {
       if (e.response?.statusCode == 401) {
@@ -527,11 +577,11 @@ class SponsoredGoalsDatasource {
   }
 
   /// Obtiene todas las categorías disponibles.
-  /// 
+  ///
   /// Endpoint: GET /api/categories
-  /// 
+  ///
   /// Retorna una lista de todas las categorías del catálogo.
-  /// 
+  ///
   /// Lanza una excepción si:
   /// - El usuario no está autenticado (401)
   /// - Hay un error de red o del servidor
@@ -550,9 +600,10 @@ class SponsoredGoalsDatasource {
 
       final List<dynamic> data = response.data as List<dynamic>;
       return data
-          .map((json) => CategoryResponseDto.fromJson(
-                json as Map<String, dynamic>,
-              ))
+          .map(
+            (json) =>
+                CategoryResponseDto.fromJson(json as Map<String, dynamic>),
+          )
           .toList();
     } on DioException catch (e) {
       if (e.response?.statusCode == 401) {
@@ -565,13 +616,13 @@ class SponsoredGoalsDatasource {
   }
 
   /// Obtiene las milestones de un proyecto patrocinado (solo sponsors).
-  /// 
+  ///
   /// Endpoint: GET /api/sponsored-goals/projects/:projectId/milestones
-  /// 
+  ///
   /// [projectId] - Identificador único del proyecto patrocinado (UUID)
-  /// 
+  ///
   /// Retorna una lista de milestones del proyecto patrocinado.
-  /// 
+  ///
   /// Lanza una excepción si:
   /// - El proyecto no existe (404)
   /// - El usuario no es sponsor (403)
@@ -594,9 +645,10 @@ class SponsoredGoalsDatasource {
 
       final List<dynamic> data = response.data as List<dynamic>;
       return data
-          .map((json) => MilestoneResponseDto.fromJson(
-                json as Map<String, dynamic>,
-              ))
+          .map(
+            (json) =>
+                MilestoneResponseDto.fromJson(json as Map<String, dynamic>),
+          )
           .toList();
     } on DioException catch (e) {
       if (e.response?.statusCode == 401) {

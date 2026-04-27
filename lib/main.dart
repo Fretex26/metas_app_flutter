@@ -76,10 +76,12 @@ import 'package:metas_app/features/sponsored_goals/application/use_cases/enroll_
 import 'package:metas_app/features/sponsored_goals/application/use_cases/get_available_sponsored_goals.use_case.dart';
 import 'package:metas_app/features/sponsored_goals/application/use_cases/get_categories.use_case.dart';
 import 'package:metas_app/features/sponsored_goals/application/use_cases/get_my_sponsored_goals.use_case.dart';
-import 'package:metas_app/features/sponsored_goals/application/use_cases/get_project_milestones.use_case.dart' as sponsored_goals_milestones;
+import 'package:metas_app/features/sponsored_goals/application/use_cases/get_project_milestones.use_case.dart'
+    as sponsored_goals_milestones;
 import 'package:metas_app/features/sponsored_goals/application/use_cases/get_sponsored_goal_by_id.use_case.dart';
 import 'package:metas_app/features/sponsored_goals/application/use_cases/get_user_sponsored_projects.use_case.dart';
 import 'package:metas_app/features/sponsored_goals/application/use_cases/update_enrollment_status.use_case.dart';
+import 'package:metas_app/features/sponsored_goals/application/use_cases/update_sponsored_milestone_status.use_case.dart';
 import 'package:metas_app/features/sponsored_goals/application/use_cases/update_sponsored_goal.use_case.dart';
 import 'package:metas_app/features/sponsored_goals/application/use_cases/verify_milestone.use_case.dart';
 import 'package:metas_app/features/sponsored_goals/domain/repositories/sponsored_goals.repository.dart';
@@ -128,85 +130,150 @@ class MyApp extends StatelessWidget {
   final ProjectRepository _projectRepository = ProjectRepositoryImpl();
   final MilestoneRepository _milestoneRepository = MilestoneRepositoryImpl();
   final TaskRepository _taskRepository = TaskRepositoryImpl();
-  final ChecklistItemRepository _checklistItemRepository = ChecklistItemRepositoryImpl();
+  final ChecklistItemRepository _checklistItemRepository =
+      ChecklistItemRepositoryImpl();
   final RewardRepository _rewardRepository = RewardRepositoryImpl();
   final SprintRepository _sprintRepository = SprintRepositoryImpl();
   final ReviewRepository _reviewRepository = ReviewRepositoryImpl();
-  final RetrospectiveRepository _retrospectiveRepository = RetrospectiveRepositoryImpl();
-  final PendingSprintsRepository _pendingSprintsRepository = PendingSprintsRepositoryImpl();
+  final RetrospectiveRepository _retrospectiveRepository =
+      RetrospectiveRepositoryImpl();
+  final PendingSprintsRepository _pendingSprintsRepository =
+      PendingSprintsRepositoryImpl();
   final DailyEntryRepository _dailyEntryRepository = DailyEntryRepositoryImpl();
-  final SponsoredGoalsRepository _sponsoredGoalsRepository = SponsoredGoalsRepositoryImpl();
+  final SponsoredGoalsRepository _sponsoredGoalsRepository =
+      SponsoredGoalsRepositoryImpl();
 
   // Use Cases
-  GetUserProjectsUseCase get _getUserProjectsUseCase => GetUserProjectsUseCase(_projectRepository);
-  GetProjectByIdUseCase get _getProjectByIdUseCase => GetProjectByIdUseCase(_projectRepository);
-  GetProjectByRewardIdUseCase get _getProjectByRewardIdUseCase => GetProjectByRewardIdUseCase(_projectRepository);
-  GetProjectProgressUseCase get _getProjectProgressUseCase => GetProjectProgressUseCase(_projectRepository);
-  CreateProjectUseCase get _createProjectUseCase => CreateProjectUseCase(_projectRepository);
-  GetProjectMilestonesUseCase get _getProjectMilestonesUseCase => GetProjectMilestonesUseCase(_milestoneRepository);
-  GetMilestoneByIdUseCase get _getMilestoneByIdUseCase => GetMilestoneByIdUseCase(_milestoneRepository);
-  CreateMilestoneUseCase get _createMilestoneUseCase => CreateMilestoneUseCase(_milestoneRepository);
-  GetMilestoneTasksUseCase get _getMilestoneTasksUseCase => GetMilestoneTasksUseCase(_taskRepository);
-  GetTaskByIdUseCase get _getTaskByIdUseCase => GetTaskByIdUseCase(_taskRepository);
-  CreateTaskUseCase get _createTaskUseCase => CreateTaskUseCase(_taskRepository);
-  GetChecklistItemsUseCase get _getChecklistItemsUseCase => GetChecklistItemsUseCase(_checklistItemRepository);
-  CreateChecklistItemUseCase get _createChecklistItemUseCase => CreateChecklistItemUseCase(_checklistItemRepository);
-  UpdateChecklistItemUseCase get _updateChecklistItemUseCase => UpdateChecklistItemUseCase(_checklistItemRepository);
-  DeleteChecklistItemUseCase get _deleteChecklistItemUseCase => DeleteChecklistItemUseCase(_checklistItemRepository);
+  GetUserProjectsUseCase get _getUserProjectsUseCase =>
+      GetUserProjectsUseCase(_projectRepository);
+  GetProjectByIdUseCase get _getProjectByIdUseCase =>
+      GetProjectByIdUseCase(_projectRepository);
+  GetProjectByRewardIdUseCase get _getProjectByRewardIdUseCase =>
+      GetProjectByRewardIdUseCase(_projectRepository);
+  GetProjectProgressUseCase get _getProjectProgressUseCase =>
+      GetProjectProgressUseCase(_projectRepository);
+  CreateProjectUseCase get _createProjectUseCase =>
+      CreateProjectUseCase(_projectRepository);
+  GetProjectMilestonesUseCase get _getProjectMilestonesUseCase =>
+      GetProjectMilestonesUseCase(_milestoneRepository);
+  GetMilestoneByIdUseCase get _getMilestoneByIdUseCase =>
+      GetMilestoneByIdUseCase(_milestoneRepository);
+  CreateMilestoneUseCase get _createMilestoneUseCase =>
+      CreateMilestoneUseCase(_milestoneRepository);
+  GetMilestoneTasksUseCase get _getMilestoneTasksUseCase =>
+      GetMilestoneTasksUseCase(_taskRepository);
+  GetTaskByIdUseCase get _getTaskByIdUseCase =>
+      GetTaskByIdUseCase(_taskRepository);
+  CreateTaskUseCase get _createTaskUseCase =>
+      CreateTaskUseCase(_taskRepository);
+  GetChecklistItemsUseCase get _getChecklistItemsUseCase =>
+      GetChecklistItemsUseCase(_checklistItemRepository);
+  CreateChecklistItemUseCase get _createChecklistItemUseCase =>
+      CreateChecklistItemUseCase(_checklistItemRepository);
+  UpdateChecklistItemUseCase get _updateChecklistItemUseCase =>
+      UpdateChecklistItemUseCase(_checklistItemRepository);
+  DeleteChecklistItemUseCase get _deleteChecklistItemUseCase =>
+      DeleteChecklistItemUseCase(_checklistItemRepository);
   // Rewards
-  GetRewardByIdUseCase get _getRewardByIdUseCase => GetRewardByIdUseCase(_rewardRepository);
-  GetUserRewardsUseCase get _getUserRewardsUseCase => GetUserRewardsUseCase(_rewardRepository);
+  GetRewardByIdUseCase get _getRewardByIdUseCase =>
+      GetRewardByIdUseCase(_rewardRepository);
+  GetUserRewardsUseCase get _getUserRewardsUseCase =>
+      GetUserRewardsUseCase(_rewardRepository);
   // Project update and delete
-  UpdateProjectUseCase get _updateProjectUseCase => UpdateProjectUseCase(_projectRepository);
-  DeleteProjectUseCase get _deleteProjectUseCase => DeleteProjectUseCase(_projectRepository);
+  UpdateProjectUseCase get _updateProjectUseCase =>
+      UpdateProjectUseCase(_projectRepository);
+  DeleteProjectUseCase get _deleteProjectUseCase =>
+      DeleteProjectUseCase(_projectRepository);
   // Milestone update and delete
-  UpdateMilestoneUseCase get _updateMilestoneUseCase => UpdateMilestoneUseCase(_milestoneRepository);
-  DeleteMilestoneUseCase get _deleteMilestoneUseCase => DeleteMilestoneUseCase(_milestoneRepository);
+  UpdateMilestoneUseCase get _updateMilestoneUseCase =>
+      UpdateMilestoneUseCase(_milestoneRepository);
+  DeleteMilestoneUseCase get _deleteMilestoneUseCase =>
+      DeleteMilestoneUseCase(_milestoneRepository);
   // Task update and delete
-  UpdateTaskUseCase get _updateTaskUseCase => UpdateTaskUseCase(_taskRepository);
-  DeleteTaskUseCase get _deleteTaskUseCase => DeleteTaskUseCase(_taskRepository);
+  UpdateTaskUseCase get _updateTaskUseCase =>
+      UpdateTaskUseCase(_taskRepository);
+  DeleteTaskUseCase get _deleteTaskUseCase =>
+      DeleteTaskUseCase(_taskRepository);
   // Sprint use cases
-  CreateSprintUseCase get _createSprintUseCase => CreateSprintUseCase(_sprintRepository);
-  GetMilestoneSprintsUseCase get _getMilestoneSprintsUseCase => GetMilestoneSprintsUseCase(_sprintRepository);
-  GetSprintByIdUseCase get _getSprintByIdUseCase => GetSprintByIdUseCase(_sprintRepository);
-  UpdateSprintUseCase get _updateSprintUseCase => UpdateSprintUseCase(_sprintRepository);
-  DeleteSprintUseCase get _deleteSprintUseCase => DeleteSprintUseCase(_sprintRepository);
-  GetSprintTasksUseCase get _getSprintTasksUseCase => GetSprintTasksUseCase(_sprintRepository);
+  CreateSprintUseCase get _createSprintUseCase =>
+      CreateSprintUseCase(_sprintRepository);
+  GetMilestoneSprintsUseCase get _getMilestoneSprintsUseCase =>
+      GetMilestoneSprintsUseCase(_sprintRepository);
+  GetSprintByIdUseCase get _getSprintByIdUseCase =>
+      GetSprintByIdUseCase(_sprintRepository);
+  UpdateSprintUseCase get _updateSprintUseCase =>
+      UpdateSprintUseCase(_sprintRepository);
+  DeleteSprintUseCase get _deleteSprintUseCase =>
+      DeleteSprintUseCase(_sprintRepository);
+  GetSprintTasksUseCase get _getSprintTasksUseCase =>
+      GetSprintTasksUseCase(_sprintRepository);
   // Review use cases
-  CreateReviewUseCase get _createReviewUseCase => CreateReviewUseCase(_reviewRepository);
-  GetSprintReviewUseCase get _getSprintReviewUseCase => GetSprintReviewUseCase(_reviewRepository);
+  CreateReviewUseCase get _createReviewUseCase =>
+      CreateReviewUseCase(_reviewRepository);
+  GetSprintReviewUseCase get _getSprintReviewUseCase =>
+      GetSprintReviewUseCase(_reviewRepository);
   // Retrospective use cases
-  CreateRetrospectiveUseCase get _createRetrospectiveUseCase => CreateRetrospectiveUseCase(_retrospectiveRepository);
-  GetSprintRetrospectiveUseCase get _getSprintRetrospectiveUseCase => GetSprintRetrospectiveUseCase(_retrospectiveRepository);
+  CreateRetrospectiveUseCase get _createRetrospectiveUseCase =>
+      CreateRetrospectiveUseCase(_retrospectiveRepository);
+  GetSprintRetrospectiveUseCase get _getSprintRetrospectiveUseCase =>
+      GetSprintRetrospectiveUseCase(_retrospectiveRepository);
   // Pending sprints use case
-  GetPendingSprintsUseCase get _getPendingSprintsUseCase => GetPendingSprintsUseCase(_pendingSprintsRepository);
+  GetPendingSprintsUseCase get _getPendingSprintsUseCase =>
+      GetPendingSprintsUseCase(_pendingSprintsRepository);
   // Daily entries use cases
-  CreateDailyEntryUseCase get _createDailyEntryUseCase => CreateDailyEntryUseCase(_dailyEntryRepository);
-  GetUserDailyEntriesUseCase get _getUserDailyEntriesUseCase => GetUserDailyEntriesUseCase(_dailyEntryRepository);
-  GetDailyEntryByDateUseCase get _getDailyEntryByDateUseCase => GetDailyEntryByDateUseCase(_dailyEntryRepository);
+  CreateDailyEntryUseCase get _createDailyEntryUseCase =>
+      CreateDailyEntryUseCase(_dailyEntryRepository);
+  GetUserDailyEntriesUseCase get _getUserDailyEntriesUseCase =>
+      GetUserDailyEntriesUseCase(_dailyEntryRepository);
+  GetDailyEntryByDateUseCase get _getDailyEntryByDateUseCase =>
+      GetDailyEntryByDateUseCase(_dailyEntryRepository);
   // Auth/me and sponsor
   GetAuthMeUseCase get _getAuthMeUseCase => GetAuthMeUseCase();
   CreateSponsorUseCase get _createSponsorUseCase => CreateSponsorUseCase();
   // Admin
-  GetAdminPendingSponsorsUseCase get _getAdminPendingSponsorsUseCase => GetAdminPendingSponsorsUseCase();
-  GetAdminAllSponsorsUseCase get _getAdminAllSponsorsUseCase => GetAdminAllSponsorsUseCase();
-  AdminApproveSponsorUseCase get _adminApproveSponsorUseCase => AdminApproveSponsorUseCase();
-  AdminRejectSponsorUseCase get _adminRejectSponsorUseCase => AdminRejectSponsorUseCase();
-  AdminDisableSponsorUseCase get _adminDisableSponsorUseCase => AdminDisableSponsorUseCase();
-  AdminEnableSponsorUseCase get _adminEnableSponsorUseCase => AdminEnableSponsorUseCase();
+  GetAdminPendingSponsorsUseCase get _getAdminPendingSponsorsUseCase =>
+      GetAdminPendingSponsorsUseCase();
+  GetAdminAllSponsorsUseCase get _getAdminAllSponsorsUseCase =>
+      GetAdminAllSponsorsUseCase();
+  AdminApproveSponsorUseCase get _adminApproveSponsorUseCase =>
+      AdminApproveSponsorUseCase();
+  AdminRejectSponsorUseCase get _adminRejectSponsorUseCase =>
+      AdminRejectSponsorUseCase();
+  AdminDisableSponsorUseCase get _adminDisableSponsorUseCase =>
+      AdminDisableSponsorUseCase();
+  AdminEnableSponsorUseCase get _adminEnableSponsorUseCase =>
+      AdminEnableSponsorUseCase();
   // Sponsored Goals
-  CreateSponsoredGoalUseCase get _createSponsoredGoalUseCase => CreateSponsoredGoalUseCase(_sponsoredGoalsRepository);
-  GetAvailableSponsoredGoalsUseCase get _getAvailableSponsoredGoalsUseCase => GetAvailableSponsoredGoalsUseCase(_sponsoredGoalsRepository);
-  EnrollInSponsoredGoalUseCase get _enrollInSponsoredGoalUseCase => EnrollInSponsoredGoalUseCase(_sponsoredGoalsRepository);
-  UpdateEnrollmentStatusUseCase get _updateEnrollmentStatusUseCase => UpdateEnrollmentStatusUseCase(_sponsoredGoalsRepository);
-  VerifyMilestoneUseCase get _verifyMilestoneUseCase => VerifyMilestoneUseCase(_sponsoredGoalsRepository);
-  GetUserSponsoredProjectsUseCase get _getUserSponsoredProjectsUseCase => GetUserSponsoredProjectsUseCase(_sponsoredGoalsRepository);
-  sponsored_goals_milestones.GetSponsoredProjectMilestonesUseCase get _getSponsoredProjectMilestonesUseCase => sponsored_goals_milestones.GetSponsoredProjectMilestonesUseCase(_sponsoredGoalsRepository);
-  GetCategoriesUseCase get _getCategoriesUseCase => GetCategoriesUseCase(_sponsoredGoalsRepository);
-  GetMySponsoredGoalsUseCase get _getMySponsoredGoalsUseCase => GetMySponsoredGoalsUseCase(_sponsoredGoalsRepository);
-  GetSponsoredGoalByIdUseCase get _getSponsoredGoalByIdUseCase => GetSponsoredGoalByIdUseCase(_sponsoredGoalsRepository);
-  UpdateSponsoredGoalUseCase get _updateSponsoredGoalUseCase => UpdateSponsoredGoalUseCase(_sponsoredGoalsRepository);
-  DeleteSponsoredGoalUseCase get _deleteSponsoredGoalUseCase => DeleteSponsoredGoalUseCase(_sponsoredGoalsRepository);
+  CreateSponsoredGoalUseCase get _createSponsoredGoalUseCase =>
+      CreateSponsoredGoalUseCase(_sponsoredGoalsRepository);
+  GetAvailableSponsoredGoalsUseCase get _getAvailableSponsoredGoalsUseCase =>
+      GetAvailableSponsoredGoalsUseCase(_sponsoredGoalsRepository);
+  EnrollInSponsoredGoalUseCase get _enrollInSponsoredGoalUseCase =>
+      EnrollInSponsoredGoalUseCase(_sponsoredGoalsRepository);
+  UpdateEnrollmentStatusUseCase get _updateEnrollmentStatusUseCase =>
+      UpdateEnrollmentStatusUseCase(_sponsoredGoalsRepository);
+  VerifyMilestoneUseCase get _verifyMilestoneUseCase =>
+      VerifyMilestoneUseCase(_sponsoredGoalsRepository);
+  UpdateSponsoredMilestoneStatusUseCase
+  get _updateSponsoredMilestoneStatusUseCase =>
+      UpdateSponsoredMilestoneStatusUseCase(_sponsoredGoalsRepository);
+  GetUserSponsoredProjectsUseCase get _getUserSponsoredProjectsUseCase =>
+      GetUserSponsoredProjectsUseCase(_sponsoredGoalsRepository);
+  sponsored_goals_milestones.GetSponsoredProjectMilestonesUseCase
+  get _getSponsoredProjectMilestonesUseCase =>
+      sponsored_goals_milestones.GetSponsoredProjectMilestonesUseCase(
+        _sponsoredGoalsRepository,
+      );
+  GetCategoriesUseCase get _getCategoriesUseCase =>
+      GetCategoriesUseCase(_sponsoredGoalsRepository);
+  GetMySponsoredGoalsUseCase get _getMySponsoredGoalsUseCase =>
+      GetMySponsoredGoalsUseCase(_sponsoredGoalsRepository);
+  GetSponsoredGoalByIdUseCase get _getSponsoredGoalByIdUseCase =>
+      GetSponsoredGoalByIdUseCase(_sponsoredGoalsRepository);
+  UpdateSponsoredGoalUseCase get _updateSponsoredGoalUseCase =>
+      UpdateSponsoredGoalUseCase(_sponsoredGoalsRepository);
+  DeleteSponsoredGoalUseCase get _deleteSponsoredGoalUseCase =>
+      DeleteSponsoredGoalUseCase(_sponsoredGoalsRepository);
 
   @override
   Widget build(BuildContext context) {
@@ -243,9 +310,7 @@ class MyApp extends StatelessWidget {
         RepositoryProvider<GetTaskByIdUseCase>.value(
           value: _getTaskByIdUseCase,
         ),
-        RepositoryProvider<CreateTaskUseCase>.value(
-          value: _createTaskUseCase,
-        ),
+        RepositoryProvider<CreateTaskUseCase>.value(value: _createTaskUseCase),
         RepositoryProvider<GetChecklistItemsUseCase>.value(
           value: _getChecklistItemsUseCase,
         ),
@@ -280,12 +345,8 @@ class MyApp extends StatelessWidget {
           value: _deleteMilestoneUseCase,
         ),
         // Task update and delete
-        RepositoryProvider<UpdateTaskUseCase>.value(
-          value: _updateTaskUseCase,
-        ),
-        RepositoryProvider<DeleteTaskUseCase>.value(
-          value: _deleteTaskUseCase,
-        ),
+        RepositoryProvider<UpdateTaskUseCase>.value(value: _updateTaskUseCase),
+        RepositoryProvider<DeleteTaskUseCase>.value(value: _deleteTaskUseCase),
         // Sprint use cases
         RepositoryProvider<CreateSprintUseCase>.value(
           value: _createSprintUseCase,
@@ -333,9 +394,7 @@ class MyApp extends StatelessWidget {
         RepositoryProvider<GetDailyEntryByDateUseCase>.value(
           value: _getDailyEntryByDateUseCase,
         ),
-        RepositoryProvider<GetAuthMeUseCase>.value(
-          value: _getAuthMeUseCase,
-        ),
+        RepositoryProvider<GetAuthMeUseCase>.value(value: _getAuthMeUseCase),
         RepositoryProvider<CreateSponsorUseCase>.value(
           value: _createSponsorUseCase,
         ),
@@ -373,12 +432,15 @@ class MyApp extends StatelessWidget {
         RepositoryProvider<VerifyMilestoneUseCase>.value(
           value: _verifyMilestoneUseCase,
         ),
+        RepositoryProvider<UpdateSponsoredMilestoneStatusUseCase>.value(
+          value: _updateSponsoredMilestoneStatusUseCase,
+        ),
         RepositoryProvider<GetUserSponsoredProjectsUseCase>.value(
           value: _getUserSponsoredProjectsUseCase,
         ),
-        RepositoryProvider<sponsored_goals_milestones.GetSponsoredProjectMilestonesUseCase>.value(
-          value: _getSponsoredProjectMilestonesUseCase,
-        ),
+        RepositoryProvider<
+          sponsored_goals_milestones.GetSponsoredProjectMilestonesUseCase
+        >.value(value: _getSponsoredProjectMilestonesUseCase),
         RepositoryProvider<GetCategoriesUseCase>.value(
           value: _getCategoriesUseCase,
         ),
@@ -412,15 +474,19 @@ class MyApp extends StatelessWidget {
             ),
           ),
           BlocProvider<CreateProjectCubit>(
-            create: (context) => CreateProjectCubit(createProjectUseCase: _createProjectUseCase),
+            create: (context) =>
+                CreateProjectCubit(createProjectUseCase: _createProjectUseCase),
           ),
           // ProjectDetailCubit is now created per-page, not globally
           BlocProvider<CreateMilestoneCubit>(
-            create: (context) => CreateMilestoneCubit(createMilestoneUseCase: _createMilestoneUseCase),
+            create: (context) => CreateMilestoneCubit(
+              createMilestoneUseCase: _createMilestoneUseCase,
+            ),
           ),
           // MilestoneDetailCubit is now created per-page, not globally
           BlocProvider<CreateTaskCubit>(
-            create: (context) => CreateTaskCubit(createTaskUseCase: _createTaskUseCase),
+            create: (context) =>
+                CreateTaskCubit(createTaskUseCase: _createTaskUseCase),
           ),
           // TaskDetailCubit is now created per-page, not globally
           // ChecklistCubit is now created per-page, not globally
@@ -446,60 +512,65 @@ class MyApp extends StatelessWidget {
           // Sponsored Goals
           BlocProvider<SponsoredGoalsCubit>(
             create: (context) => SponsoredGoalsCubit(
-              getAvailableSponsoredGoalsUseCase: _getAvailableSponsoredGoalsUseCase,
+              getAvailableSponsoredGoalsUseCase:
+                  _getAvailableSponsoredGoalsUseCase,
             ),
           ),
         ],
         child: MaterialApp(
-        debugShowCheckedModeBanner: false,
-        theme: lightMode,
-        darkTheme: darkMode,
-        home: BlocConsumer<AuthCubit, AuthStates>(
-          builder: (context, state) {
-            // Quitar splash cuando la UI esté lista para mostrarse
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              FlutterNativeSplash.remove();
-            });
-            // Usuario no autenticado → mostrar página de login/registro
-            if (state is Unauthenticated) {
-              return const AuthPage();
-            }
-            // Usuario autenticado → redirigir según rol y estado del sponsor
-            if (state is AuthSuccess) {
-              final s = state.session;
-              // Admin → Portal de administración
-              if (s.isAdmin) return const AdminSponsorsPage();
-              // Sponsor → verificar estado
-              if (s.isSponsor) {
-                // PENDING → Pantalla de espera
-                if (s.isSponsorPending) return const SponsorPendingPage();
-                // REJECTED o DISABLED → Acceso denegado
-                if (s.isSponsorRejectedOrDisabled) return const AccessDeniedPage();
-                // APPROVED → Portal sponsor (sin sprints/dailies/reviews/retro)
-                return const MainNavigationPage(isSponsor: true);
+          debugShowCheckedModeBanner: false,
+          theme: lightMode,
+          darkTheme: darkMode,
+          home: BlocConsumer<AuthCubit, AuthStates>(
+            builder: (context, state) {
+              // Quitar splash cuando la UI esté lista para mostrarse
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                FlutterNativeSplash.remove();
+              });
+              // Usuario no autenticado → mostrar página de login/registro
+              if (state is Unauthenticated) {
+                return const AuthPage();
               }
-              // User normal → Portal usuario (con todas las funcionalidades)
-              return const MainNavigationPage(isSponsor: false);
-            }
-            // Usuario autenticado con Google pero necesita completar registro
-            if (state is GoogleAuthPendingRegistration) {
-              return RegisterPage(
-                togglePages: () {},
-                googleEmail: state.email,
-                isGoogleRegistration: true,
-              );
-            }
-            // Estado de carga inicial
-            return LoadingWidget();
-          },
-          listener: (context, state) {
-            if (state is AuthFailure) {
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.error)));
-            }
-          },
+              // Usuario autenticado → redirigir según rol y estado del sponsor
+              if (state is AuthSuccess) {
+                final s = state.session;
+                // Admin → Portal de administración
+                if (s.isAdmin) return const AdminSponsorsPage();
+                // Sponsor → verificar estado
+                if (s.isSponsor) {
+                  // PENDING → Pantalla de espera
+                  if (s.isSponsorPending) return const SponsorPendingPage();
+                  // REJECTED o DISABLED → Acceso denegado
+                  if (s.isSponsorRejectedOrDisabled) {
+                    return const AccessDeniedPage();
+                  }
+                  // APPROVED → Portal sponsor (sin sprints/dailies/reviews/retro)
+                  return const MainNavigationPage(isSponsor: true);
+                }
+                // User normal → Portal usuario (con todas las funcionalidades)
+                return const MainNavigationPage(isSponsor: false);
+              }
+              // Usuario autenticado con Google pero necesita completar registro
+              if (state is GoogleAuthPendingRegistration) {
+                return RegisterPage(
+                  togglePages: () {},
+                  googleEmail: state.email,
+                  isGoogleRegistration: true,
+                );
+              }
+              // Estado de carga inicial
+              return LoadingWidget();
+            },
+            listener: (context, state) {
+              if (state is AuthFailure) {
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(SnackBar(content: Text(state.error)));
+              }
+            },
+          ),
         ),
       ),
-    ),
     );
   }
 }

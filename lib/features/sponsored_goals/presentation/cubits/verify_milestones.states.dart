@@ -2,7 +2,7 @@ import 'package:metas_app/features/projects/domain/entities/milestone.dart';
 import 'package:metas_app/features/projects/domain/entities/project.dart';
 
 /// Estados posibles del cubit para verificar milestones de proyectos patrocinados.
-/// 
+///
 /// Define todos los estados que puede tener la verificación de milestones:
 /// - Estado inicial
 /// - Cargando proyectos/milestones
@@ -22,7 +22,7 @@ class VerifyMilestonesLoadingProjects extends VerifyMilestonesState {}
 class VerifyMilestonesLoadingMilestones extends VerifyMilestonesState {}
 
 /// Estado cuando los datos se han cargado exitosamente.
-/// 
+///
 /// Contiene la lista de proyectos y las milestones del proyecto seleccionado.
 class VerifyMilestonesLoaded extends VerifyMilestonesState {
   /// Lista de proyectos patrocinados del usuario
@@ -64,8 +64,19 @@ class VerifyMilestonesVerifying extends VerifyMilestonesState {
   VerifyMilestonesVerifying({required this.milestoneId});
 }
 
+/// Estado mientras se está actualizando el estado de una milestone
+class VerifyMilestonesUpdatingStatus extends VerifyMilestonesState {
+  final String milestoneId;
+  final VerifyMilestonesLoaded previousState;
+
+  VerifyMilestonesUpdatingStatus({
+    required this.milestoneId,
+    required this.previousState,
+  });
+}
+
 /// Estado cuando una milestone se ha verificado exitosamente.
-/// 
+///
 /// Contiene la milestone verificada.
 class VerifyMilestonesVerified extends VerifyMilestonesState {
   /// Milestone verificada
@@ -76,7 +87,7 @@ class VerifyMilestonesVerified extends VerifyMilestonesState {
 }
 
 /// Estado cuando ocurre un error.
-/// 
+///
 /// Contiene el mensaje de error para mostrarlo al usuario.
 class VerifyMilestonesError extends VerifyMilestonesState {
   /// Mensaje descriptivo del error ocurrido

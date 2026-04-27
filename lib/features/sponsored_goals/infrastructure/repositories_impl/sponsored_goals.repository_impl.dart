@@ -15,25 +15,23 @@ import 'package:metas_app/features/sponsored_goals/infrastructure/mappers/sponso
 import 'package:metas_app/features/sponsored_goals/infrastructure/mappers/sponsored_goal.mapper.dart';
 
 /// Implementación concreta del repositorio de Sponsored Goals.
-/// 
+///
 /// Conecta la capa de dominio con la capa de infraestructura, utilizando
 /// el datasource para obtener datos y los mappers para convertir DTOs a entidades.
-/// 
+///
 /// Esta implementación sigue el patrón Repository de Clean Architecture.
 class SponsoredGoalsRepositoryImpl implements SponsoredGoalsRepository {
   /// Datasource para realizar las llamadas HTTP al backend
   final SponsoredGoalsDatasource _datasource;
 
   /// Constructor del repositorio implementado
-  /// 
+  ///
   /// [datasource] - Datasource opcional para inyección de dependencias (útil para testing)
   SponsoredGoalsRepositoryImpl({SponsoredGoalsDatasource? datasource})
-      : _datasource = datasource ?? SponsoredGoalsDatasource();
+    : _datasource = datasource ?? SponsoredGoalsDatasource();
 
   @override
-  Future<SponsoredGoal> createSponsoredGoal(
-    CreateSponsoredGoalDto dto,
-  ) async {
+  Future<SponsoredGoal> createSponsoredGoal(CreateSponsoredGoalDto dto) async {
     try {
       final responseDto = await _datasource.createSponsoredGoal(dto);
       return responseDto.toDomain();
@@ -103,7 +101,9 @@ class SponsoredGoalsRepositoryImpl implements SponsoredGoalsRepository {
     String sponsoredGoalId,
   ) async {
     try {
-      final responseDto = await _datasource.enrollInSponsoredGoal(sponsoredGoalId);
+      final responseDto = await _datasource.enrollInSponsoredGoal(
+        sponsoredGoalId,
+      );
       return responseDto.toDomain();
     } catch (e) {
       rethrow;
@@ -137,6 +137,22 @@ class SponsoredGoalsRepositoryImpl implements SponsoredGoalsRepository {
   }
 
   @override
+  Future<Milestone> updateSponsoredMilestoneStatus(
+    String milestoneId,
+    String status,
+  ) async {
+    try {
+      final responseDto = await _datasource.updateSponsoredMilestoneStatus(
+        milestoneId,
+        status,
+      );
+      return responseDto.toDomain();
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  @override
   Future<List<Project>> getUserSponsoredProjects(String userEmail) async {
     try {
       final dtos = await _datasource.getUserSponsoredProjects(userEmail);
@@ -147,7 +163,9 @@ class SponsoredGoalsRepositoryImpl implements SponsoredGoalsRepository {
   }
 
   @override
-  Future<List<Milestone>> getSponsoredProjectMilestones(String projectId) async {
+  Future<List<Milestone>> getSponsoredProjectMilestones(
+    String projectId,
+  ) async {
     try {
       final dtos = await _datasource.getProjectMilestones(projectId);
       return dtos.map((dto) => dto.toDomain()).toList();

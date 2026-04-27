@@ -8,10 +8,10 @@ import 'package:metas_app/features/sponsored_goals/infrastructure/dto/update_enr
 import 'package:metas_app/features/sponsored_goals/infrastructure/dto/update_sponsored_goal.dto.dart';
 
 /// Repositorio abstracto para operaciones relacionadas con Sponsored Goals.
-/// 
+///
 /// Define el contrato que debe cumplir cualquier implementación del repositorio,
 /// siguiendo el patrón Repository de Clean Architecture.
-/// 
+///
 /// Este repositorio maneja:
 /// - Creación de sponsored goals (solo sponsors)
 /// - Listado de sponsored goals disponibles (usuarios normales)
@@ -21,16 +21,16 @@ import 'package:metas_app/features/sponsored_goals/infrastructure/dto/update_spo
 /// - Obtención de proyectos y milestones de usuarios (sponsors)
 abstract class SponsoredGoalsRepository {
   /// Crea un nuevo Sponsored Goal.
-  /// 
+  ///
   /// Solo puede ser llamado por sponsors aprobados.
-  /// 
+  ///
   /// [dto] - Datos del sponsored goal a crear
-  /// 
+  ///
   /// Retorna el sponsored goal creado.
   Future<SponsoredGoal> createSponsoredGoal(CreateSponsoredGoalDto dto);
 
   /// Lista los Sponsored Goals del sponsor autenticado.
-  /// 
+  ///
   /// Retorna los objetivos creados por el sponsor.
   Future<List<SponsoredGoal>> listSponsorSponsoredGoals();
 
@@ -47,32 +47,32 @@ abstract class SponsoredGoalsRepository {
   Future<void> deleteSponsoredGoal(String id);
 
   /// Obtiene la lista de Sponsored Goals disponibles para usuarios normales.
-  /// 
+  ///
   /// Solo retorna objetivos activos (fechas válidas y cupo disponible).
-  /// 
+  ///
   /// [categoryIds] - IDs de categorías opcionales para filtrar
-  /// 
+  ///
   /// Retorna una lista de sponsored goals disponibles.
   Future<List<SponsoredGoal>> getAvailableSponsoredGoals({
     List<String>? categoryIds,
   });
 
   /// Inscribe a un usuario normal a un Sponsored Goal.
-  /// 
+  ///
   /// Automáticamente duplica el proyecto del sponsor en los proyectos del usuario.
-  /// 
+  ///
   /// [sponsoredGoalId] - Identificador único del sponsored goal
-  /// 
+  ///
   /// Retorna la inscripción creada.
   Future<SponsorEnrollment> enrollInSponsoredGoal(String sponsoredGoalId);
 
   /// Actualiza el estado de una inscripción.
-  /// 
+  ///
   /// Solo puede ser llamado por sponsors.
-  /// 
+  ///
   /// [enrollmentId] - Identificador único de la inscripción
   /// [dto] - DTO con el nuevo estado
-  /// 
+  ///
   /// Retorna la inscripción actualizada.
   Future<SponsorEnrollment> updateEnrollmentStatus(
     String enrollmentId,
@@ -80,38 +80,49 @@ abstract class SponsoredGoalsRepository {
   );
 
   /// Verifica una milestone de un proyecto patrocinado.
-  /// 
+  ///
   /// Solo puede ser llamado por sponsors.
   /// Cambia el estado de la milestone a "completed".
-  /// 
+  ///
   /// [milestoneId] - Identificador único de la milestone
-  /// 
+  ///
   /// Retorna la milestone verificada.
   Future<Milestone> verifyMilestone(String milestoneId);
 
+  /// Actualiza el estado de una milestone de un proyecto patrocinado.
+  ///
+  /// Solo puede ser llamado por sponsors y para objetivos con verificación manual.
+  ///
+  /// [milestoneId] - Identificador único de la milestone
+  /// [status] - Nuevo estado: pending, in_progress o completed
+  Future<Milestone> updateSponsoredMilestoneStatus(
+    String milestoneId,
+    String status,
+  );
+
   /// Obtiene los proyectos patrocinados de un usuario.
-  /// 
+  ///
   /// Solo puede ser llamado por sponsors.
   /// Solo retorna proyectos de los sponsored goals del sponsor que hace la petición.
-  /// 
+  ///
   /// [userEmail] - Email del usuario
-  /// 
+  ///
   /// Retorna una lista de proyectos patrocinados del usuario.
   Future<List<Project>> getUserSponsoredProjects(String userEmail);
 
   /// Obtiene las milestones de un proyecto patrocinado.
-  /// 
+  ///
   /// Solo puede ser llamado por sponsors.
-  /// 
+  ///
   /// [projectId] - Identificador único del proyecto patrocinado
-  /// 
+  ///
   /// Retorna una lista de milestones del proyecto.
   Future<List<Milestone>> getSponsoredProjectMilestones(String projectId);
 
   /// Obtiene todas las categorías disponibles.
-  /// 
+  ///
   /// Retorna una lista de todas las categorías del catálogo.
-  /// 
+  ///
   /// Lanza una excepción si:
   /// - El usuario no está autenticado (401)
   /// - Hay un error de red o del servidor
