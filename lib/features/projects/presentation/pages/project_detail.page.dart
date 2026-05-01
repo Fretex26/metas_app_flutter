@@ -152,17 +152,24 @@ class _ProjectDetailContent extends StatelessWidget {
   }
 
   Future<void> _handleDelete(BuildContext context) async {
+    final isSponsored = project.sponsoredGoalId != null;
     final confirmed = await DeleteConfirmationDialog.show(
       context: context,
       title: 'Eliminar Proyecto',
-      message: '¿Estás seguro de que deseas eliminar este proyecto? '
-          'Esta acción eliminará permanentemente el proyecto, todos sus '
-          'milestones, sprints, tasks, checklist items y datos relacionados. '
-          'Esta acción no se puede deshacer.',
+      message: isSponsored
+          ? '¿Eliminar este proyecto patrocinado de tu cuenta? Se borrarán '
+              'tu progreso, milestones, tareas y datos asociados. La plantilla '
+              'del patrocinador no se modifica; si lo deseas, podrás volver a '
+              'inscribirte mientras haya cupo. Esta acción no se puede deshacer.'
+          : '¿Estás seguro de que deseas eliminar este proyecto? '
+              'Esta acción eliminará permanentemente el proyecto, todos sus '
+              'milestones, sprints, tasks, checklist items y datos relacionados. '
+              'Esta acción no se puede deshacer.',
     );
 
     if (!confirmed) return;
 
+    if (!context.mounted) return;
     context.read<DeleteProjectCubit>().deleteProject(projectId);
   }
 
@@ -190,22 +197,21 @@ class _ProjectDetailContent extends StatelessWidget {
                 icon: const Icon(Icons.edit),
                 onPressed: () => _handleEdit(context),
               ),
-            if (project.sponsoredGoalId == null)
-              BlocBuilder<DeleteProjectCubit, DeleteProjectState>(
-                builder: (context, deleteState) {
-                  final isDeleting = deleteState is DeleteProjectLoading;
-                  return IconButton(
-                    icon: isDeleting
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.delete),
-                    onPressed: isDeleting ? null : () => _handleDelete(context),
-                  );
-                },
-              ),
+            BlocBuilder<DeleteProjectCubit, DeleteProjectState>(
+              builder: (context, deleteState) {
+                final isDeleting = deleteState is DeleteProjectLoading;
+                return IconButton(
+                  icon: isDeleting
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.delete),
+                  onPressed: isDeleting ? null : () => _handleDelete(context),
+                );
+              },
+            ),
           ],
         ),
         body: RefreshIndicator(
