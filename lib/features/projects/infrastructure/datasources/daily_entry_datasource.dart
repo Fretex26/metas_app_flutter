@@ -253,7 +253,10 @@ class DailyEntryDatasource {
           '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
       final response = await _dio.get(
         '${ApiConfig.baseUrl}/api/daily-entries/date/$dateString',
-        queryParameters: {'sprintId': sprintId},
+        queryParameters: {
+          'sprintId': sprintId,
+          'timezoneOffsetMinutes': date.timeZoneOffset.inMinutes,
+        },
         options: Options(
           headers: {
             'Authorization': 'Bearer $token',

@@ -24,6 +24,12 @@ class CreateDailyEntryDto {
   /// Nivel de dificultad experimentado (requerido)
   final Difficulty difficulty;
 
+  /// Fecha civil local YYYY-MM-DD (alinea "hoy" con el backend).
+  final String? localDate;
+
+  /// `DateTime.timeZoneOffset.inMinutes` del dispositivo.
+  final int? timezoneOffsetMinutes;
+
   /// Constructor del DTO para crear entrada diaria
   /// 
   /// Nota: energyChange no se incluye como parámetro porque siempre se envía como "increased"
@@ -36,6 +42,8 @@ class CreateDailyEntryDto {
     required this.notesYesterday,
     required this.notesToday,
     required this.difficulty,
+    this.localDate,
+    this.timezoneOffsetMinutes,
   });
 
   /// Convierte el DTO a JSON para enviarlo al backend.
@@ -54,6 +62,12 @@ class CreateDailyEntryDto {
 
     if (taskId != null) {
       json['taskId'] = taskId;
+    }
+    if (localDate != null) {
+      json['localDate'] = localDate;
+    }
+    if (timezoneOffsetMinutes != null) {
+      json['timezoneOffsetMinutes'] = timezoneOffsetMinutes;
     }
 
     return json;

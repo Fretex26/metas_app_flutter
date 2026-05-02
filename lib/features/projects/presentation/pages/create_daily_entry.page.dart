@@ -58,12 +58,18 @@ class _CreateDailyEntryPageState extends State<CreateDailyEntryPage> {
       return;
     }
 
+    final now = DateTime.now();
+    final localDate =
+        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+
     final dto = CreateDailyEntryDto(
       taskId: widget.taskId,
       sprintId: widget.sprintId,
       notesYesterday: _notesYesterdayController.text.trim(),
       notesToday: _notesTodayController.text.trim(),
       difficulty: _selectedDifficulty,
+      localDate: localDate,
+      timezoneOffsetMinutes: now.timeZoneOffset.inMinutes,
     );
 
     context.read<CreateDailyEntryCubit>().createDailyEntry(dto);
