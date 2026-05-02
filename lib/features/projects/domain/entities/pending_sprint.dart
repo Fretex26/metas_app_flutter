@@ -1,7 +1,5 @@
-/// Entidad que representa un Sprint pendiente de review o retrospectiva.
-/// 
-/// Un sprint pendiente es aquel que ha finalizado (endDate <= hoy) y que aún
-/// no tiene review o retrospectiva (o ambas) completadas.
+/// Sprint con una o más acciones pendientes (entrada diaria de hoy, review
+/// y/o retrospectiva según corresponda).
 class PendingSprint {
   /// Identificador único del sprint (UUID)
   final String sprintId;
@@ -30,6 +28,9 @@ class PendingSprint {
   /// Indica si el sprint necesita retrospectiva (no tiene retrospectiva creada)
   final bool needsRetrospective;
 
+  /// Indica si falta la entrada diaria de hoy para este sprint (sprint activo).
+  final bool needsDaily;
+
   /// Constructor de la entidad PendingSprint
   PendingSprint({
     required this.sprintId,
@@ -41,6 +42,7 @@ class PendingSprint {
     required this.milestoneName,
     required this.needsReview,
     required this.needsRetrospective,
+    this.needsDaily = false,
   });
 
   /// Verifica si el sprint necesita ambas (review y retrospectiva)

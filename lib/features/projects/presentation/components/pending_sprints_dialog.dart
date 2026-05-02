@@ -1,20 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:metas_app/features/projects/application/use_cases/create_daily_entry.use_case.dart';
 import 'package:metas_app/features/projects/application/use_cases/create_review.use_case.dart';
 import 'package:metas_app/features/projects/application/use_cases/create_retrospective.use_case.dart';
 import 'package:metas_app/features/projects/domain/entities/pending_sprint.dart';
+import 'package:metas_app/features/projects/presentation/cubits/create_daily_entry.cubit.dart';
 import 'package:metas_app/features/projects/presentation/cubits/create_review.cubit.dart';
 import 'package:metas_app/features/projects/presentation/cubits/create_retrospective.cubit.dart';
+import 'package:metas_app/features/projects/presentation/pages/create_daily_entry.page.dart';
 import 'package:metas_app/features/projects/presentation/pages/create_review.page.dart';
 import 'package:metas_app/features/projects/presentation/pages/create_retrospective.page.dart';
 import 'package:metas_app/features/projects/presentation/pages/sprint_detail.page.dart';
 import 'package:metas_app/features/projects/presentation/utils/date_formatter.dart';
 
-/// Diálogo que muestra los sprints pendientes de review o retrospectiva.
-/// 
+/// Diálogo que muestra sprints que requieren acción: entrada diaria (hoy),
+/// review o retrospectiva (sprints finalizados sin cerrar).
+///
 /// Permite al usuario:
 /// - Ver todos los sprints que necesitan atención
-/// - Navegar directamente a crear review/retrospectiva
+/// - Navegar a crear daily / review / retrospectiva
 /// - Navegar al detalle del sprint
 class PendingSprintsDialog extends StatelessWidget {
   final List<PendingSprint> pendingSprints;
@@ -51,7 +55,7 @@ class PendingSprintsDialog extends StatelessWidget {
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Sprints Pendientes',
+                      'Acciones pendientes',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                             color: Theme.of(context).colorScheme.onPrimaryContainer,
                             fontWeight: FontWeight.bold,
@@ -96,7 +100,7 @@ class PendingSprintsDialog extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'No hay sprints pendientes de review o retrospectiva',
+            'No hay acciones pendientes (daily, review o retrospectiva)',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Colors.grey[600],
@@ -186,6 +190,22 @@ class PendingSprintsDialog extends StatelessWidget {
     return Wrap(
       spacing: 4,
       children: [
+        if (sprint.needsDaily)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.teal[100],
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              'Daily',
+              style: TextStyle(
+                color: Colors.teal[900],
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
         if (sprint.needsReview)
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -222,110 +242,156 @@ class PendingSprintsDialog extends StatelessWidget {
     );
   }
 
-  void _handleSprintTap(BuildContext context, PendingSprint sprint) {
-    if (sprint.needsBoth) {
-      // Si necesita ambas, mostrar diálogo para elegir (no cerrar el diálogo principal aún)
-      _showActionDialog(context, sprint);
-    } else {
-      // Para los demás casos, cerrar el diálogo primero y luego navegar
-      Navigator.of(context).pop();
-      
-      if (sprint.needsReview) {
-        // Navegar directamente a crear review
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => BlocProvider(
-              create: (context) => CreateReviewCubit(
-                createReviewUseCase: context.read<CreateReviewUseCase>(),
-              ),
-              child: CreateReviewPage(sprintId: sprint.sprintId),
-            ),
-          ),
-        );
-      } else if (sprint.needsRetrospective) {
-        // Navegar directamente a crear retrospectiva
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => BlocProvider(
-              create: (context) => CreateRetrospectiveCubit(
-                createRetrospectiveUseCase: context.read<CreateRetrospectiveUseCase>(),
-              ),
-              child: CreateRetrospectivePage(sprintId: sprint.sprintId),
-            ),
-          ),
-        );
-      } else {
-        // Si ya tiene ambas (caso raro), navegar al detalle
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => SprintDetailPage(
-              projectId: sprint.projectId,
-              milestoneId: sprint.milestoneId,
-              sprintId: sprint.sprintId,
-            ),
-          ),
-        );
-      }
-    }
+  int _pendingActionsCount(PendingSprint sprint) {
+    var n = 0;
+    if (sprint.needsDaily) n++;
+    if (sprint.needsReview) n++;
+    if (sprint.needsRetrospective) n++;
+    return n;
   }
 
-  void _showActionDialog(BuildContext context, PendingSprint sprint) {
-    // Guardar referencias a los use cases y obtener el root navigator antes de cerrar el diálogo
+  void _handleSprintTap(BuildContext context, PendingSprint sprint) {
+    final count = _pendingActionsCount(sprint);
+    if (count > 1) {
+      _showPickActionDialog(context, sprint);
+      return;
+    }
+    if (count == 1) {
+      Navigator.of(context).pop();
+      if (sprint.needsDaily) {
+        _openCreateDaily(context, sprint);
+      } else if (sprint.needsReview) {
+        _openCreateReview(context, sprint);
+      } else if (sprint.needsRetrospective) {
+        _openCreateRetrospective(context, sprint);
+      }
+      return;
+    }
+    Navigator.of(context).pop();
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SprintDetailPage(
+          projectId: sprint.projectId,
+          milestoneId: sprint.milestoneId,
+          sprintId: sprint.sprintId,
+        ),
+      ),
+    );
+  }
+
+  void _openCreateDaily(BuildContext context, PendingSprint sprint) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BlocProvider(
+          create: (_) => CreateDailyEntryCubit(
+            createDailyEntryUseCase: context.read<CreateDailyEntryUseCase>(),
+          ),
+          child: CreateDailyEntryPage(sprintId: sprint.sprintId),
+        ),
+      ),
+    );
+  }
+
+  void _openCreateReview(BuildContext context, PendingSprint sprint) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BlocProvider(
+          create: (context) => CreateReviewCubit(
+            createReviewUseCase: context.read<CreateReviewUseCase>(),
+          ),
+          child: CreateReviewPage(sprintId: sprint.sprintId),
+        ),
+      ),
+    );
+  }
+
+  void _openCreateRetrospective(BuildContext context, PendingSprint sprint) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => BlocProvider(
+          create: (context) => CreateRetrospectiveCubit(
+            createRetrospectiveUseCase:
+                context.read<CreateRetrospectiveUseCase>(),
+          ),
+          child: CreateRetrospectivePage(sprintId: sprint.sprintId),
+        ),
+      ),
+    );
+  }
+
+  void _showPickActionDialog(BuildContext context, PendingSprint sprint) {
     final createReviewUseCase = context.read<CreateReviewUseCase>();
     final createRetrospectiveUseCase = context.read<CreateRetrospectiveUseCase>();
+    final createDailyEntryUseCase = context.read<CreateDailyEntryUseCase>();
     final rootNavigator = Navigator.of(context, rootNavigator: true);
-    
+
     showDialog(
       context: context,
       builder: (dialogContext) {
-        // Función auxiliar para cerrar ambos diálogos y navegar
         void navigateAndClose(Widget page) {
-          Navigator.of(dialogContext).pop(); // Cerrar diálogo de acción
-          Navigator.of(context).pop(); // Cerrar diálogo principal
-          // Usar Future.microtask para asegurar que la navegación ocurra después del cierre
-          // y usar el root navigator que siempre está disponible
+          Navigator.of(dialogContext).pop();
+          Navigator.of(context).pop();
           Future.microtask(() {
             rootNavigator.push(
               MaterialPageRoute(builder: (_) => page),
             );
           });
         }
-        
+
         return AlertDialog(
           title: Text(sprint.sprintName),
           content: const Text(
-            'Este sprint necesita tanto review como retrospectiva. ¿Qué deseas crear primero?',
+            'Este sprint tiene varias acciones pendientes. Elige una:',
           ),
           actions: [
-            TextButton(
-              onPressed: () {
-                navigateAndClose(
-                  BlocProvider(
-                    create: (_) => CreateReviewCubit(
-                      createReviewUseCase: createReviewUseCase,
+            if (sprint.needsDaily)
+              TextButton(
+                onPressed: () {
+                  navigateAndClose(
+                    BlocProvider(
+                      create: (_) => CreateDailyEntryCubit(
+                        createDailyEntryUseCase: createDailyEntryUseCase,
+                      ),
+                      child: CreateDailyEntryPage(sprintId: sprint.sprintId),
                     ),
-                    child: CreateReviewPage(sprintId: sprint.sprintId),
-                  ),
-                );
-              },
-              child: const Text('Review'),
-            ),
-            TextButton(
-              onPressed: () {
-                navigateAndClose(
-                  BlocProvider(
-                    create: (_) => CreateRetrospectiveCubit(
-                      createRetrospectiveUseCase: createRetrospectiveUseCase,
+                  );
+                },
+                child: const Text('Entrada diaria'),
+              ),
+            if (sprint.needsReview)
+              TextButton(
+                onPressed: () {
+                  navigateAndClose(
+                    BlocProvider(
+                      create: (_) => CreateReviewCubit(
+                        createReviewUseCase: createReviewUseCase,
+                      ),
+                      child: CreateReviewPage(sprintId: sprint.sprintId),
                     ),
-                    child: CreateRetrospectivePage(sprintId: sprint.sprintId),
-                  ),
-                );
-              },
-              child: const Text('Retrospectiva'),
-            ),
+                  );
+                },
+                child: const Text('Review'),
+              ),
+            if (sprint.needsRetrospective)
+              TextButton(
+                onPressed: () {
+                  navigateAndClose(
+                    BlocProvider(
+                      create: (_) => CreateRetrospectiveCubit(
+                        createRetrospectiveUseCase:
+                            createRetrospectiveUseCase,
+                      ),
+                      child:
+                          CreateRetrospectivePage(sprintId: sprint.sprintId),
+                    ),
+                  );
+                },
+                child: const Text('Retrospectiva'),
+              ),
             TextButton(
               onPressed: () {
                 navigateAndClose(
@@ -336,7 +402,7 @@ class PendingSprintsDialog extends StatelessWidget {
                   ),
                 );
               },
-              child: const Text('Ver Detalle'),
+              child: const Text('Ver detalle del sprint'),
             ),
           ],
         );

@@ -9,7 +9,15 @@ import 'package:metas_app/features/auth/infrastructure/dto/auth_me_response.dto.
 class AuthMeDatasource {
   final Dio _dio;
 
-  AuthMeDatasource({Dio? dio}) : _dio = dio ?? Dio();
+  AuthMeDatasource({Dio? dio})
+      : _dio = dio ??
+            Dio(
+              BaseOptions(
+                connectTimeout: const Duration(seconds: 15),
+                receiveTimeout: const Duration(seconds: 20),
+                sendTimeout: const Duration(seconds: 15),
+              ),
+            );
 
   Future<String> _getAuthToken() async {
     final user = FirebaseAuth.instance.currentUser;

@@ -53,6 +53,7 @@ class PendingSprintResponseDto {
       milestoneName: milestoneName,
       needsReview: needsReview,
       needsRetrospective: needsRetrospective,
+      needsDaily: false,
     );
   }
 }

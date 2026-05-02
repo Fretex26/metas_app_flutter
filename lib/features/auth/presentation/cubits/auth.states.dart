@@ -37,6 +37,14 @@ class AuthFailure extends AuthStates {
   AuthFailure({required this.error});
 }
 
+/// Fallo al restaurar la sesión contra el backend ([GET /auth/me]) con Firebase ya activo.
+///
+/// Típico: API caída, URL incorrecta, timeout o sin red. No usar para errores de login en formulario.
+class AuthSessionRestoreFailure extends AuthStates {
+  final String error;
+  AuthSessionRestoreFailure({required this.error});
+}
+
 /// Estado cuando el usuario se autentica con Google pero necesita completar el registro.
 ///
 /// Se emite cuando el usuario es nuevo y necesita proporcionar nombre y rol

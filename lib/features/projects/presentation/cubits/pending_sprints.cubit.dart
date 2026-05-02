@@ -1,19 +1,19 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:metas_app/features/projects/application/use_cases/get_pending_sprints.use_case.dart';
+import 'package:metas_app/features/projects/application/use_cases/load_pending_reminders.use_case.dart';
 import 'package:metas_app/features/projects/presentation/cubits/pending_sprints.states.dart';
 
 class PendingSprintsCubit extends Cubit<PendingSprintsState> {
-  final GetPendingSprintsUseCase _getPendingSprintsUseCase;
+  final LoadPendingRemindersUseCase _loadPendingRemindersUseCase;
 
-  PendingSprintsCubit({required GetPendingSprintsUseCase getPendingSprintsUseCase})
-      : _getPendingSprintsUseCase = getPendingSprintsUseCase,
+  PendingSprintsCubit({required LoadPendingRemindersUseCase loadPendingRemindersUseCase})
+      : _loadPendingRemindersUseCase = loadPendingRemindersUseCase,
         super(PendingSprintsInitial());
 
-  /// Carga los sprints pendientes de review o retrospectiva
+  /// Carga review/retrospectiva pendientes (API) y sprints activos sin daily hoy.
   Future<void> loadPendingSprints() async {
     emit(PendingSprintsLoading());
     try {
-      final pendingSprints = await _getPendingSprintsUseCase();
+      final pendingSprints = await _loadPendingRemindersUseCase();
       emit(PendingSprintsLoaded(pendingSprints));
     } catch (e) {
       emit(PendingSprintsError(e.toString()));

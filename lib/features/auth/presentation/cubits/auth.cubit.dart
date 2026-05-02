@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:metas_app/core/config/api_config.dart';
 import 'package:metas_app/features/auth/application/use_cases/get_auth_me.use_case.dart';
 import 'package:metas_app/features/auth/domain/entities/app_user.dart';
 import 'package:metas_app/features/auth/domain/entities/auth_me_session.dart';
@@ -100,9 +101,28 @@ class AuthCubit extends Cubit<AuthStates> {
         emit(Unauthenticated());
         return;
       }
-      emit(AuthFailure(error: e.response?.data?['message']?.toString() ?? e.message ?? 'Error al obtener sesión'));
+      emit(AuthSessionRestoreFailure(error: _mapDioToUserMessage(e)));
     } catch (e) {
-      emit(AuthFailure(error: e.toString()));
+      emit(AuthSessionRestoreFailure(error: e.toString()));
+    }
+  }
+
+  String _mapDioToUserMessage(DioException e) {
+    final serverMsg = e.response?.data?['message']?.toString();
+    if (serverMsg != null && serverMsg.isNotEmpty) return serverMsg;
+    switch (e.type) {
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.sendTimeout:
+      case DioExceptionType.receiveTimeout:
+        return 'Tiempo de espera al contactar el servidor. Comprueba que el backend esté '
+            'en marcha y que la URL de la API sea correcta (${ApiConfig.baseUrl}).';
+      case DioExceptionType.connectionError:
+        return 'No se pudo conectar con el servidor. Revisa la red, el firewall y que '
+            'API_BASE_URL apunte a tu máquina (${ApiConfig.baseUrl}). En emulador Android suele usarse http://10.0.2.2:PUERTO.';
+      case DioExceptionType.badCertificate:
+        return 'Certificado TLS no válido al conectar con el servidor.';
+      default:
+        return e.message ?? 'Error al obtener sesión';
     }
   }
 
